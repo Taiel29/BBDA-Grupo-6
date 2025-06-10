@@ -1,0 +1,3 @@
+Nomenclaturas usadas hasta ahora:
+- Nombres singulares para las tablas y atributos
+- Palabras separadas por guión bajo, y con mayuscula en cada inicial [Así_Por_Ejemplo]
