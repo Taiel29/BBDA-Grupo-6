@@ -36,6 +36,111 @@ IF OBJECT_ID(N'actividades.Adulto_Responsable', N'U') IS NOT NULL
 	DROP TABLE actividades.Adulto_Responsable
 GO
 
+
+CREATE TABLE grupo_familiar(
+	 ID INT Identity(1,1) PRIMARY KEY,
+	 ID_Socio INT NULL,
+
+);
+
+CREATE TABLE estado_socio(
+	ID INT Identity(1,1) PRIMARY KEY,
+	Descripcion VARCHAR(100) NOT NULL
+);
+
+CREATE TABLE tarifa_categoria(
+	ID INT Identity (1,1) PRIMARY KEY,
+	Importe FLOAT NOT NULL,
+	Vigente_hasta DATE NOT NULL
+);
+CREATE TABLE cuenta(
+	ID INT Identity(1,1) PRIMARY KEY,
+	Saldo FLOAT,
+	ID_socio INT,
+);
+
+CREATE TABLE categoria_socio(
+	ID INT Identity (1,1) PRIMARY KEY,
+	Nombre VARCHAR(50) NOT NULL,
+	Descripcion VARCHAR(100),
+	ID_tarifa_categoria INT
+	FOREIGN KEY(ID_tarifa_categoria) REFERENCES tarifa_categoria(ID) ON DELETE CASCADE
+
+);
+
+
+CREATE TABLE socio( -- realizar schema por seguridad
+	ID INT Identity(1,1) PRIMARY KEY,
+	DNI CHAR(9) NOT NULL UNIQUE,
+	Fecha_nacimiento DATE,
+	Apellido VARCHAR(50) NOT NULL,
+	Nombre VARCHAR(50) NOT NULL,
+	Numero_de_socio_OS INT NOT NULL UNIQUE,
+	Telefono_de_emergencias_OS INT NOT NULL,
+	Telefono_contacto_emergencia INT NOT NULL,
+	Nombre_obra_social VARCHAR(50),
+	Telefono_contacto INT,
+	ID_estado_socio INT,
+	ID_grupo_familiar INT,
+	ID_categoria_socio INT,
+	FOREIGN KEY(ID_estado_socio) REFERENCES estado_socio(ID) ON DELETE CASCADE,
+	FOREIGN KEY(ID_grupo_familiar) REFERENCES grupo_familiar(ID) ON DELETE CASCADE,
+	FOREIGN KEY(ID_categoria_socio) REFERENCES categoria_socio(ID) ON DELETE CASCADE,
+);
+
+ALTER TABLE cuenta
+ADD CONSTRAINT FK_id_socio FOREIGN KEY (ID_socio)
+REFERENCES socio(ID) ON DELETE CASCADE
+
+ALTER TABLE grupo_familiar
+ADD CONSTRAINT FK_id_socio FOREIGN KEY (ID_socio)
+REFERENCES socio(ID) ON DELETE CASCADE
+
+CREATE TABLE empleado( -- realizar schema por seguridad
+	ID INT Identity (1,1) PRIMARY KEY,
+	DNI CHAR(9) NOT NULL UNIQUE,
+	Fecha_nacimiento DATE,
+	Nombre VARCHAR(50) NOT NULL,
+	Apellido VARCHAR(50) NOT NULL,
+	Area VARCHAR(20) NOT NULL,
+	Telefono_de_contacto INT,
+	Telefono_de_emergencia INT NOT NULL
+);
+
+CREATE TABLE rol ( -- realizar schema por seguridad
+	ID INT Identity (1,1) PRIMARY KEY,
+	Nombre_del_puesto VARCHAR(30) NOT NULL
+);
+
+CREATE TABLE usuario(
+	ID INT Identity (1,1) PRIMARY KEY,
+	Contraseña VARCHAR(10) NOT NULL,
+	Email VARCHAR(100) NOT NULL,
+	Nombre_usuario VARCHAR(20) NOT NULL,
+	Fecha_de_vigencia_contraseña DATE NOT NULL,
+	ID_socio INT NULL,
+	ID_empleado INT NULL,
+	ID_rol INT,
+	FOREIGN KEY(ID_socio) REFERENCES socio(ID) ON DELETE CASCADE,
+	FOREIGN KEY (ID_empleado) REFERENCES empleado(ID) ON DELETE CASCADE,
+	FOREIGN KEY (ID_rol) REFERENCES rol(ID) ON DELETE CASCADE
+); 
+
+CREATE TABLE cuenta_utilizo_medio_de_pago (-- falta tabla medio de pago
+	ID_cuenta INT UNIQUE,
+	ID_medio_de_pago INT,
+	FOREIGN KEY(ID_cuenta) REFERENCES cuenta(ID) ON DELETE CASCADE,
+	--FOREIGN KEY(ID_medio_de_pago) REFERENCES medio_de_pago(ID) -- falta tabla medio de pago
+); 
+
+CREATE TABLE socio_asiste_clase(
+	ID_socio INT UNIQUE,
+	ID_clase INT,
+	Fecha DATE,
+	--FOREIGN KEY(ID_clase) REFERENCES clase(ID) ON DELETE CASCADE -- falta tabla clase 
+	FOREIGN KEY(ID_socio) REFERENCES socio(ID) ON DELETE CASCADE
+);
+
 CREATE TABLE actividades.Adulto_Responsable(
     ID INT Identity(1,1) Primary Key,
     DNI CHAR(9) NOT NULL UNIQUE,
