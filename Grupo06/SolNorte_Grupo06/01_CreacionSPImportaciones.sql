@@ -1,7 +1,7 @@
---En este script se realiza la creación de los Store Procedure para importar archivos
+--En este script se realiza la creaciÃ³n de los Store Procedure para importar archivos
 
 --Fecha de entrega: 19/06/2025
---Comisión: 2900
+--ComisiÃ³n: 2900
 --Grupo: 6
 --Base de datos Aplicada
 --Integrantes:
@@ -88,7 +88,7 @@ END
 GO
 
 -- Importar asistencias a clases
-
+/* POR TERMINAR
 CREATE OR ALTER PROCEDURE importaciones.Import_Asistencias
 	@rutaArch NVARCHAR(255)
 AS
@@ -115,7 +115,7 @@ BEGIN
 		'''SELECT * FROM [presentismo_actividades$]'');
 	');
 
-/* POR TERMINAR
+
 
 	--El campo ASISTE presentaba espacios en blanco y caracteres duplicados, con LTRIM y RTRIM eliminamos los espacios en blanco y con LEFT nos quedamos con 1 caracter
 	
