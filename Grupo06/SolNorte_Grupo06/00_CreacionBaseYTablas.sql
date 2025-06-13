@@ -13,6 +13,11 @@
 IF EXISTS (SELECT name FROM sys.databases WHERE name = N'Com2900G06')
 BEGIN
     USE master
+
+	ALTER DATABASE Com2900G06
+	SET SINGLE_USER
+	WITH ROLLBACK IMMEDIATE;
+
 	DROP DATABASE Com2900G06
 END
 GO
@@ -35,6 +40,12 @@ IF SCHEMA_ID(N'socios') IS NULL
 
 IF SCHEMA_ID(N'club') IS NULL
     EXEC('CREATE SCHEMA club');
+
+IF SCHEMA_ID(N'importaciones') IS NULL
+    EXEC('CREATE SCHEMA importaciones');
+
+IF SCHEMA_ID(N'reportes') IS NULL
+    EXEC('CREATE SCHEMA reportes');
 -- CREACIÓN DE TABLAS--
 
 IF OBJECT_ID(N'socios.Grupo_Familiar', N'U') IS NOT NULL
@@ -43,7 +54,7 @@ GO
 
 CREATE TABLE socios.Grupo_Familiar(
 	 ID INT Identity(1,1) PRIMARY KEY,
-	 ID_Socio_Responsable INT NULL,
+	 ID_Socio_Responsable CHAR(7) NULL,
 );
 
 IF OBJECT_ID(N'socios.Estado_Socio', N'U') IS NOT NULL
@@ -83,7 +94,7 @@ IF OBJECT_ID(N'socios.Socio', N'U') IS NOT NULL
 GO
 
 CREATE TABLE socios.Socio(
-	ID INT Identity(1,1) PRIMARY KEY,
+	ID CHAR(7) PRIMARY KEY,
 	DNI CHAR(9) NOT NULL UNIQUE,
 	Fecha_Nacimiento DATE,
 	Apellido VARCHAR(50) NOT NULL,
@@ -99,6 +110,7 @@ CREATE TABLE socios.Socio(
 	FOREIGN KEY(ID_Estado_Socio) REFERENCES socios.Estado_Socio(ID) ON DELETE CASCADE,
 	FOREIGN KEY(ID_Grupo_Familiar) REFERENCES socios.Grupo_Familiar(ID) ON DELETE SET NULL,
 	FOREIGN KEY(ID_Categoria_Socio) REFERENCES socios.Categoria_Socio(ID) ON DELETE CASCADE,
+	CONSTRAINT CK_ID_SOCIO CHECK (ID LIKE '[A-Z][A-Z]-[0-9][0-9][0-9][0-9]')
 );
 
 IF OBJECT_ID(N'socios.Cuenta', N'U') IS NOT NULL
@@ -108,7 +120,7 @@ GO
 CREATE TABLE socios.Cuenta(
 	ID INT Identity(1,1) PRIMARY KEY,
 	Saldo FLOAT,
-	ID_Socio INT,
+	ID_Socio CHAR(7),
 	FOREIGN KEY(ID_Socio) REFERENCES socios.Socio(ID) ON DELETE CASCADE,
 );
 
@@ -150,7 +162,7 @@ CREATE TABLE club.Usuario(
 	Email VARCHAR(100) NOT NULL,
 	Nombre_Usuario VARCHAR(20) NOT NULL,
 	Fecha_De_Vigencia_Contraseña DATE NOT NULL,
-	ID_Socio INT NULL,
+	ID_Socio CHAR(7) NULL,
 	ID_Empleado INT NULL,
 	ID_Rol INT,
 	FOREIGN KEY(ID_Socio) REFERENCES socios.Socio(ID) ON DELETE CASCADE,
@@ -254,7 +266,7 @@ CREATE TABLE actividades.Inscripcion(
     Fecha DATE NOT NULL,
     ID_Adulto INT NULL,
     Tipo VARCHAR(20) NOT NULL,
-    ID_Socio INT NOT NULL,
+    ID_Socio CHAR(7) NOT NULL,
     FOREIGN KEY (ID_Adulto) REFERENCES actividades.Adulto_Responsable(ID) ON DELETE CASCADE,
     FOREIGN KEY (ID_Socio) REFERENCES socios.Socio(ID) ON DELETE CASCADE
 );
@@ -266,7 +278,8 @@ GO
 CREATE TABLE tesoreria.Tarifa_Actividad(
     ID INT IDENTITY(1,1) Primary Key,
     Importe_Por_Mes NUMERIC(10,2) NOT NULL,
-    Vigente_Hasta DATE
+    Vigente_Hasta DATE,
+	CONSTRAINT CK_TarifaVigente UNIQUE (Importe_Por_Mes, Vigente_Hasta)
 );
 
 IF OBJECT_ID(N'actividades.Actividad', N'U') IS NOT NULL
@@ -277,7 +290,8 @@ CREATE TABLE actividades.Actividad(
 	ID INT Identity(1,1) Primary Key,
     Descripcion VARCHAR(50) NOT NULL,
     ID_Tarifa INT NOT NULL,
-	FOREIGN KEY(ID_Tarifa) REFERENCES tesoreria.Tarifa_Actividad(ID) ON DELETE CASCADE
+	FOREIGN KEY(ID_Tarifa) REFERENCES tesoreria.Tarifa_Actividad(ID) ON DELETE CASCADE,
+	CONSTRAINT CK_Actividad_Descripcion_Tarifa UNIQUE (Descripcion, ID_Tarifa)
 );
 
 IF OBJECT_ID(N'actividades.Clase', N'U') IS NOT NULL
@@ -293,14 +307,15 @@ CREATE TABLE actividades.Clase(
 	FOREIGN KEY(ID_Profesor) REFERENCES club.Empleado(ID) ON DELETE CASCADE
 );
 
-IF OBJECT_ID(N'actividades.Asiste', N'U') IS NOT NULL
-	DROP TABLE actividades.Asiste
+IF OBJECT_ID(N'actividades.Socio_Asiste_Clase', N'U') IS NOT NULL
+	DROP TABLE actividades.Socio_Asiste_Clase
 GO
 
 CREATE TABLE actividades.Socio_Asiste_Clase(
 	ID INT Identity(1,1) Primary Key,
 	Fecha DATE NOT NULL,
-	ID_Socio INT NOT NULL,
+	ASISTE CHAR NOT NULL,
+	ID_Socio CHAR(7) NOT NULL,
 	ID_Clase INT NOT NULL,
 	FOREIGN KEY(ID_Socio) REFERENCES socios.Socio(ID) ON DELETE CASCADE,
 	FOREIGN KEY(ID_Clase) REFERENCES actividades.Clase(ID) ON DELETE CASCADE
@@ -381,7 +396,7 @@ GO
 CREATE TABLE socios.Socio_Invita_Invitado(
 	ID INT Identity(1,1) Primary Key,
 	Fecha_De_Invitacion DATE NOT NULL,
-	ID_Socio INT NOT NULL,
+	ID_Socio CHAR(7) NOT NULL,
 	ID_Invitado INT NOT NULL,
 	FOREIGN KEY(ID_Socio) REFERENCES socios.Socio(ID) ON DELETE CASCADE,
 	FOREIGN KEY(ID_Invitado) REFERENCES socios.Invitado(ID) ON DELETE CASCADE
@@ -412,7 +427,7 @@ GO
 
 CREATE TABLE tesoreria.Recargo(
 	ID INT IDENTITY(1,1) PRIMARY KEY,
-	Porcentaje DECIMAL(3,2) CHECK(Porcentaje >= 0 AND Porcentaje <= 100),
+	Porcentaje DECIMAL(5,2) CHECK(Porcentaje >= 0 AND Porcentaje <= 100),
 	Cantidad_Dias_Desde_Vencimiento INT
 );
 
@@ -455,7 +470,7 @@ GO
 CREATE TABLE tesoreria.Tipo_Reembolso(
 	ID INT IDENTITY(1,1) PRIMARY KEY,
 	Descripcion VARCHAR(100),
-	Porcentaje DECIMAL(3,2) CHECK(Porcentaje >= 0 AND Porcentaje <= 100)
+	Porcentaje DECIMAL(5,2) CHECK(Porcentaje >= 0 AND Porcentaje <= 100)
 );
 
 IF OBJECT_ID(N'tesoreria.Reembolso', N'U') IS NOT NULL
@@ -479,7 +494,7 @@ GO
 CREATE TABLE tesoreria.Descuento(
 	ID INT IDENTITY(1,1) PRIMARY KEY,
 	Descripcion VARCHAR(100),
-	Porcentaje DECIMAL(3,2) CHECK(Porcentaje >= 0 AND Porcentaje <= 100)
+	Porcentaje DECIMAL(5,2) CHECK(Porcentaje >= 0 AND Porcentaje <= 100)
 );
 
 IF OBJECT_ID(N'tesoreria.Descuento_Aplicado_Factura', N'U') IS NOT NULL
@@ -503,7 +518,7 @@ CREATE TABLE tesoreria.Cuota(
 	Fecha_Inicio DATE,
 	Fecha_Final DATE,
 	Mes INT,
-	ID_Socio INT,
+	ID_Socio CHAR(7),
 	ID_Factura INT,
 	FOREIGN KEY (ID_Socio) REFERENCES socios.Socio (ID) ON DELETE CASCADE,
 	FOREIGN KEY (ID_Factura) REFERENCES tesoreria.Factura(ID) ON DELETE CASCADE
