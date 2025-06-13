@@ -158,27 +158,76 @@ CREATE TABLE club.Usuario(
 	FOREIGN KEY (ID_Rol) REFERENCES club.Rol(ID) ON DELETE CASCADE
 ); 
 
+IF OBJECT_ID(N'tesoreria.Medio_Pago', N'U') IS NOT NULL
+	DROP TABLE tesoreria.Medio_Pago
+GO
+
+CREATE TABLE tesoreria.Medio_Pago(
+	ID INT IDENTITY(1,1) PRIMARY KEY
+	--Capaz habría que meter otro atributo
+);
+
+IF OBJECT_ID(N'tesoreria.Tarjeta', N'U') IS NOT NULL
+	DROP TABLE tesoreria.Tarjeta
+GO
+
+CREATE TABLE tesoreria.Tarjeta(
+	ID INT IDENTITY(1,1) PRIMARY KEY,
+	Banco VARCHAR(100),
+	Tipo_Tarjeta VARCHAR(50),
+	Nombre_Titular VARCHAR(100),
+	Numero_Tarjeta VARCHAR(50),
+	ID_Medio_Pago INT NOT NULL,
+	FOREIGN KEY (ID_Medio_Pago) REFERENCES tesoreria.Medio_Pago(ID) ON DELETE CASCADE
+);
+
+IF OBJECT_ID(N'tesoreria.Transferencia', N'U') IS NOT NULL
+	DROP TABLE tesoreria.Transferencia
+GO
+
+CREATE TABLE tesoreria.Transferencia(
+	ID INT IDENTITY(1,1) PRIMARY KEY,
+	Nombre_Titular VARCHAR(100),
+	CVU VARCHAR(50),
+	ID_Medio_Pago INT NOT NULL,
+	FOREIGN KEY (ID_Medio_Pago) REFERENCES tesoreria.Medio_Pago(ID) ON DELETE CASCADE
+);
+
+IF OBJECT_ID(N'tesoreria.Sucursal_Pago', N'U') IS NOT NULL
+	DROP TABLE tesoreria.Sucursal_Pago
+GO
+
+CREATE TABLE tesoreria.Sucursal_Pago(
+	ID INT IDENTITY(1,1) PRIMARY KEY,
+	Direccion VARCHAR(100),
+	Red_Pago VARCHAR(50),
+	Nombre_Local VARCHAR(50),
+	ID_Medio_Pago INT NOT NULL,
+	FOREIGN KEY (ID_Medio_Pago) REFERENCES tesoreria.Medio_Pago(ID) ON DELETE CASCADE
+);
+
+IF OBJECT_ID(N'tesoreria.Debito_Automatico', N'U') IS NOT NULL
+	DROP TABLE tesoreria.Debito_Automatico
+GO
+
+CREATE TABLE tesoreria.Debito_Automatico(
+	ID INT IDENTITY(1,1) PRIMARY KEY,
+	Banco VARCHAR(100),
+	Numero_Tarjeta VARCHAR(50),
+	Nombre_Titular VARCHAR(50),
+	ID_Medio_Pago INT NOT NULL,
+	FOREIGN KEY (ID_Medio_Pago) REFERENCES tesoreria.Medio_Pago(ID) ON DELETE CASCADE
+);
+
 IF OBJECT_ID(N'socios.Cuenta_Utilizo_Medio_De_Pago', N'U') IS NOT NULL
 	DROP TABLE socios.Cuenta_Utilizo_Medio_De_Pago
 GO
 
-CREATE TABLE socios.Cuenta_Utilizo_Medio_De_Pago (-- falta tabla medio de pago
+CREATE TABLE socios.Cuenta_Utilizo_Medio_De_Pago (
 	ID_Cuenta INT UNIQUE,
 	ID_Medio_De_Pago INT,
 	FOREIGN KEY(ID_Cuenta) REFERENCES socios.Cuenta(ID) ON DELETE CASCADE,
-	--FOREIGN KEY(ID_medio_de_pago) REFERENCES medio_de_pago(ID) -- falta tabla medio de pago
-); 
-
-IF OBJECT_ID(N'club.socio_Asiste_Clase', N'U') IS NOT NULL
-	DROP TABLE club.socio_Asiste_Clase
-GO
-
-CREATE TABLE club.socio_Asiste_Clase(
-	ID_Socio INT UNIQUE,
-	ID_Clase INT,
-	Fecha DATE,
-	--FOREIGN KEY(ID_clase) REFERENCES clase(ID) ON DELETE CASCADE -- falta tabla clase 
-	FOREIGN KEY(ID_socio) REFERENCES socios.Socio(ID) ON DELETE CASCADE
+	FOREIGN KEY(ID_medio_de_pago) REFERENCES tesoreria.Medio_Pago(ID) ON DELETE CASCADE
 );
 
 IF OBJECT_ID(N'actividades.Adulto_Responsable', N'U') IS NOT NULL
@@ -248,7 +297,7 @@ IF OBJECT_ID(N'actividades.Asiste', N'U') IS NOT NULL
 	DROP TABLE actividades.Asiste
 GO
 
-CREATE TABLE actividades.Asiste(
+CREATE TABLE actividades.Socio_Asiste_Clase(
 	ID INT Identity(1,1) Primary Key,
 	Fecha DATE NOT NULL,
 	ID_Socio INT NOT NULL,
@@ -329,11 +378,133 @@ IF OBJECT_ID(N'socios.Invita', N'U') IS NOT NULL
 	DROP TABLE socios.Invita
 GO
 
-CREATE TABLE socios.Invita(
+CREATE TABLE socios.Socio_Invita_Invitado(
 	ID INT Identity(1,1) Primary Key,
 	Fecha_De_Invitacion DATE NOT NULL,
 	ID_Socio INT NOT NULL,
 	ID_Invitado INT NOT NULL,
 	FOREIGN KEY(ID_Socio) REFERENCES socios.Socio(ID) ON DELETE CASCADE,
 	FOREIGN KEY(ID_Invitado) REFERENCES socios.Invitado(ID) ON DELETE CASCADE
+);
+
+IF OBJECT_ID(N'tesoreria.Estado_Factura', N'U') IS NOT NULL
+	DROP TABLE tesoreria.Estado_Factura
+GO
+
+CREATE TABLE tesoreria.Estado_Factura(
+	ID INT IDENTITY(1,1) PRIMARY KEY,
+	Descripcion VARCHAR(50)
+);
+
+IF OBJECT_ID(N'tesoreria.Pago', N'U') IS NOT NULL
+	DROP TABLE tesoreria.Pago
+GO
+
+CREATE TABLE tesoreria.Pago(
+	ID INT IDENTITY(1,1) PRIMARY KEY,
+	Fecha_Pago DATE,
+	Hora_Pago TIME
+);
+
+IF OBJECT_ID(N'tesoreria.Recargo', N'U') IS NOT NULL
+	DROP TABLE tesoreria.Recargo
+GO
+
+CREATE TABLE tesoreria.Recargo(
+	ID INT IDENTITY(1,1) PRIMARY KEY,
+	Porcentaje DECIMAL(3,2) CHECK(Porcentaje >= 0 AND Porcentaje <= 100),
+	Cantidad_Dias_Desde_Vencimiento INT
+);
+
+IF OBJECT_ID(N'tesoreria.Factura', N'U') IS NOT NULL
+	DROP TABLE tesoreria.Factura
+GO
+
+CREATE TABLE tesoreria.Factura(
+	ID INT IDENTITY (1,1) PRIMARY KEY,
+	PDV INT,
+	Numero INT,
+	Fecha_Emision DATE,
+	Hora_Emision TIME,
+	Importe DECIMAL(10,2),
+	Fecha_Primer_Vencimiento DATE,
+	Fecha_Segundo_Vencimiento DATE,
+	ID_Recargo INT,
+	ID_Estado INT,
+	ID_Pago INT,
+	FOREIGN KEY (ID_Recargo) REFERENCES tesoreria.Recargo(ID) ON DELETE CASCADE,
+	FOREIGN KEY (ID_Estado) REFERENCES tesoreria.Estado_Factura(ID) ON DELETE CASCADE,
+	FOREIGN KEY (ID_Pago) REFERENCES tesoreria.Pago(ID) ON DELETE CASCADE
+);
+
+IF OBJECT_ID(N'tesoreria.Detalle_Factura', N'U') IS NOT NULL
+	DROP TABLE tesoreria.Detalle_Factura
+GO
+
+CREATE TABLE tesoreria.Detalle_Factura(
+	ID INT IDENTITY(1,1) PRIMARY KEY,
+	Subtotal DECIMAL(10,2),
+	ID_Inscripcion INT NOT NULL,
+	FOREIGN KEY (ID_Inscripcion) REFERENCES actividades.Inscripcion(ID) ON DELETE CASCADE
+);
+
+IF OBJECT_ID(N'tesoreria.Tipo_Reembolso', N'U') IS NOT NULL
+	DROP TABLE tesoreria.Tipo_Reembolso
+GO
+
+CREATE TABLE tesoreria.Tipo_Reembolso(
+	ID INT IDENTITY(1,1) PRIMARY KEY,
+	Descripcion VARCHAR(100),
+	Porcentaje DECIMAL(3,2) CHECK(Porcentaje >= 0 AND Porcentaje <= 100)
+);
+
+IF OBJECT_ID(N'tesoreria.Reembolso', N'U') IS NOT NULL
+	DROP TABLE tesoreria.Reembolso
+GO
+
+CREATE TABLE tesoreria.Reembolso(
+	ID INT IDENTITY(1,1) PRIMARY KEY,
+	ID_Pago INT,
+	ID_Tipo INT,
+	ID_Cuenta INT,
+	FOREIGN KEY (ID_Pago) REFERENCES tesoreria.Pago(ID) ON DELETE CASCADE,
+	FOREIGN KEY (ID_Tipo) REFERENCES tesoreria.Tipo_Reembolso(ID) ON DELETE CASCADE,
+	FOREIGN KEY (ID_Cuenta) REFERENCES socios.Cuenta(ID) ON DELETE CASCADE
+);
+
+IF OBJECT_ID(N'tesoreria.Descuento', N'U') IS NOT NULL
+	DROP TABLE tesoreria.Descuento
+GO
+
+CREATE TABLE tesoreria.Descuento(
+	ID INT IDENTITY(1,1) PRIMARY KEY,
+	Descripcion VARCHAR(100),
+	Porcentaje DECIMAL(3,2) CHECK(Porcentaje >= 0 AND Porcentaje <= 100)
+);
+
+IF OBJECT_ID(N'tesoreria.Descuento_Aplicado_Factura', N'U') IS NOT NULL
+	DROP TABLE tesoreria.Descuento_Aplicado_Factura
+GO
+
+CREATE TABLE tesoreria.Descuento_Aplicado_Factura(
+	ID INT IDENTITY(1,1) PRIMARY KEY,
+	ID_Descuento INT NOT NULL,
+	ID_Factura INT NOT NULL,
+	FOREIGN KEY (ID_Descuento) REFERENCES tesoreria.Descuento(ID) ON DELETE CASCADE,
+	FOREIGN KEY (ID_Factura) REFERENCES tesoreria.Factura(ID) ON DELETE CASCADE
+);
+
+IF OBJECT_ID(N'tesoreria.Cuota', N'U') IS NOT NULL
+	DROP TABLE tesoreria.Cuota
+GO
+
+CREATE TABLE tesoreria.Cuota(
+	ID INT IDENTITY(1,1) PRIMARY KEY,
+	Fecha_Inicio DATE,
+	Fecha_Final DATE,
+	Mes INT,
+	ID_Socio INT,
+	ID_Factura INT,
+	FOREIGN KEY (ID_Socio) REFERENCES socios.Socio (ID) ON DELETE CASCADE,
+	FOREIGN KEY (ID_Factura) REFERENCES tesoreria.Factura(ID) ON DELETE CASCADE
 );
