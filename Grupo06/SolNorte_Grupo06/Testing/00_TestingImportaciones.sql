@@ -17,18 +17,44 @@ GO
 -- Al final deben quedar las tablas tesoreria.Tarifa_Actividad y actividades.Actividad actualizadas sin duplicados
 
 EXEC importaciones.Import_Actividades
-    @rutaArch = 'T:\Descargas\TPI-2025-1C (2)\TPI-2025-1C\Datos socios.xlsx'
+    @rutaArch = 'C:\Users\Public\Documents\Datos socios.xlsx'
 GO
 
 SELECT * FROM tesoreria.Tarifa_Actividad
 SELECT * FROM actividades.Actividad
 
 -- Probar SP "importaciones.Import_Asistencias"
--- En proceso
+-- Al final deben quedar actualizadas y sin duplicados:
+-- Tabla club.Empleado con el nombre completo del profesor
+-- Tabla actividades.Clase con el día de la semana que se da, a que actividad pertenece, y cual profe la da
+
+-- EN PROCESO: Tabla actividades.Socio_Asiste_Clase con el alumno, la fecha, la clase, y si asistió
 
 EXEC importaciones.Import_Asistencias
-    @rutaArch = 'T:\Descargas\TPI-2025-1C (2)\TPI-2025-1C\Datos socios.xlsx'
-GO
+    @rutaArch = 'C:\Users\Public\Documents\Datos socios.xlsx'
 
-SELECT* FROM club.Empleado
-SELECT* FROM actividades.Socio_Asiste_Clase
+SELECT * FROM club.Empleado
+SELECT * FROM actividades.Clase
+
+-- SELECT * FROM actividades.Socio_Asiste_Clase
+
+-- Probar SP "importaciones.Import_Tarifas_Cuotas"
+-- Al final deben quedar actualizadas y sin duplicados:
+-- Tabla tesoreria.Tarifa_Categoria con los importes y sus vigencias
+-- Tabla socios.Categoria_Socio con los tipos de socios disponibles y a cual tarifa se corresponden
+
+EXEC importaciones.Import_Tarifas_Cuotas
+    @rutaArch = 'C:\Users\Public\Documents\Datos socios.xlsx'
+
+SELECT * FROM tesoreria.Tarifa_Categoria
+SELECT * FROM socios.Categoria_Socio
+
+-- Probar SP "importaciones.Import_Tarifas_Pileta"
+-- Al final deben quedar actualizadas y sin duplicados:
+-- Tabla tesoreria.Tarifa_Categoria con los importes y sus vigencias
+-- Tabla socios.Categoria_Socio con los tipos de socios disponibles y a cual tarifa se corresponden
+
+EXEC importaciones.Import_Tarifas_Pileta
+    @rutaArch = 'C:\Users\Public\Documents\Datos socios.xlsx'
+
+SELECT * FROM tesoreria.Tarifa_Pileta

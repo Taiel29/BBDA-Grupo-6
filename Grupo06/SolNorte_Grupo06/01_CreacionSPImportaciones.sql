@@ -1,6 +1,6 @@
 --En este script se realiza la creación de los Store Procedure para importar archivos
 
---Fecha de entrega: 19/06/2025
+--Fecha de entrega: 17/06/2025
 --Comisión: 2900
 --Grupo: 6
 --Base de datos Aplicada
@@ -16,10 +16,10 @@ USE Com2900G06
 GO
 
 /* Necesario para que funcione pero solo hace falta ejecutar una vez:
-sp_configure 'show advanced options', 1;
+EXEC sp_configure 'show advanced options', 1;
 RECONFIGURE;
 GO
-sp_configure 'Ad Hoc Distributed Queries', 1;
+EXEC sp_configure 'Ad Hoc Distributed Queries', 1;
 RECONFIGURE;
 GO
 
@@ -32,7 +32,7 @@ EXEC master.dbo.sp_MSset_oledb_prop
     N'DynamicParameters', 1;
 */
 
---Importar tarifas de actividades
+--Importar tarifas de actividades y crear las actividades si no están
 
 CREATE OR ALTER PROCEDURE importaciones.Import_Actividades
 	@rutaArch NVARCHAR(255)
@@ -42,7 +42,7 @@ BEGIN
 	CREATE TABLE #TempImport_Actividad(
     ID INT IDENTITY(1,1) Primary Key,
     Actividad VARCHAR(50) NOT NULL,
-    Importe INT NOT NULL,
+    Importe NUMERIC(10,2) NOT NULL,
 	Vigente_Hasta DATE NOT NULL
 	);
 	
@@ -54,7 +54,11 @@ BEGIN
 		'''Excel 12.0;Database='+@rutaArch+';HDR=YES'','+
 		'''SELECT * FROM [Tarifas$B2:D8]'');
 	');
-	
+
+	UPDATE #TempImport_Actividad
+	SET Actividad = 'Ajedrez'
+	WHERE LTRIM(RTRIM(Actividad)) COLLATE Latin1_General_CI_AI = 'Ajederez';
+
 	INSERT INTO tesoreria.Tarifa_Actividad(Importe_Por_Mes, Vigente_Hasta)
 	SELECT DISTINCT Importe, Vigente_Hasta
 	FROM #TempImport_Actividad tmp
@@ -76,19 +80,121 @@ BEGIN
 	WHERE NOT EXISTS (
 		SELECT 1
 		FROM actividades.Actividad a
-		WHERE
-		(a.Descripcion = '' OR a.Descripcion IS NULL)
-		OR
-		(a.Descripcion = tmp.Actividad
-		AND a.ID_Tarifa = t.ID)
+		WHERE a.Descripcion = tmp.Actividad
+		  AND a.ID_Tarifa = t.ID
 	);
+
 
 	DROP TABLE #TempImport_Actividad;
 END
 GO
 
+--Importar tarifas de pileta
+CREATE OR ALTER PROCEDURE importaciones.Import_Tarifas_Pileta
+	@rutaArch NVARCHAR(255)
+AS
+BEGIN
+	CREATE TABLE #TempImport_Tarifa_Pileta(
+    ID INT IDENTITY(1,1) Primary Key,
+    Descripcion VARCHAR(50),
+	Rango_Edad VARCHAR(50),
+    Valor_Socios NUMERIC(10,2) NOT NULL,
+	Valor_Invitados NUMERIC(10,2),
+	Vigente_Hasta DATE NOT NULL
+	);
+	
+	EXEC('INSERT INTO #TempImport_Tarifa_Pileta (Descripcion, Rango_Edad, Valor_Socios, Valor_Invitados, Vigente_Hasta)' +
+		'SELECT F1 as Descripcion, F2 as Rango_Edad, F3 as Valor_Socios, F4 as Valor_Invitados, F5 as Vigente_Hasta ' +
+		'FROM OPENROWSET(''Microsoft.ACE.OLEDB.16.0'','+
+		'''Excel 12.0;Database='+@rutaArch+';HDR=NO'','+
+		'''SELECT * FROM [Tarifas$B17:F22]'');
+	');
+	
+	UPDATE #TempImport_Tarifa_Pileta
+	SET Descripcion = b.DescripcionAnterior
+	FROM #TempImport_Tarifa_Pileta tmp
+	JOIN (
+		SELECT ID, Descripcion, LAG(Descripcion) OVER (ORDER BY ID) AS DescripcionAnterior
+		FROM #TempImport_Tarifa_Pileta
+	) b on tmp.ID = b.ID
+	WHERE tmp.Descripcion IS NULL;
+
+	INSERT INTO tesoreria.Tarifa_Pileta (Descripcion, Importe, Vigente_Hasta)
+	SELECT 
+		Descripcion + ' ' + Rango_Edad + ' Socio' AS Descripcion,
+		Valor_Socios,
+		Vigente_Hasta
+	FROM #TempImport_Tarifa_Pileta
+	WHERE Valor_Socios IS NOT NULL
+
+	UNION ALL
+
+	SELECT 
+		Descripcion + ' ' + Rango_Edad + ' Invitado' AS Descripcion,
+		Valor_Invitados,
+		Vigente_Hasta
+	FROM #TempImport_Tarifa_Pileta
+	WHERE Valor_Invitados IS NOT NULL;
+
+	DROP TABLE #TempImport_Tarifa_Pileta;
+END
+GO
+
+--Importar tarifas de cuotas y crea las categorias de socios
+
+CREATE OR ALTER PROCEDURE importaciones.Import_Tarifas_Cuotas
+	@rutaArch NVARCHAR(255)
+AS
+BEGIN
+	CREATE TABLE #TempImport_Tarifa_Cuota(
+    ID INT IDENTITY(1,1) Primary Key,
+    Descripcion VARCHAR(50),
+    Valor NUMERIC(10,2) NOT NULL,
+	Vigente_Hasta DATE NOT NULL
+	);
+	
+	EXEC('INSERT INTO #TempImport_Tarifa_Cuota (Descripcion, Valor, Vigente_Hasta)' +
+		'SELECT LTRIM(RTRIM([Categoria socio])),
+		[Valor cuota],
+		[Vigente hasta]' +
+		'FROM OPENROWSET(''Microsoft.ACE.OLEDB.16.0'','+
+		'''Excel 12.0;Database='+@rutaArch+';HDR=YES'','+
+		'''SELECT * FROM [Tarifas$B10:D13]'');
+	');
+
+	INSERT INTO tesoreria.Tarifa_Categoria (Importe, Vigente_Hasta)
+	SELECT tmp.Valor, tmp.Vigente_Hasta
+	FROM #TempImport_Tarifa_Cuota tmp
+	WHERE NOT EXISTS (
+		SELECT 1
+		FROM tesoreria.Tarifa_Categoria tc
+		WHERE
+		tc.Importe = tmp.Valor
+		AND
+		tc.Vigente_Hasta = tmp.Vigente_Hasta
+	);
+
+	INSERT INTO socios.Categoria_Socio (Nombre, ID_Tarifa_Categoria)
+	SELECT tmp.Descripcion, tc.ID
+	FROM #TempImport_Tarifa_Cuota tmp
+	JOIN tesoreria.Tarifa_Categoria tc
+	ON
+	tc.Importe = tmp.Valor
+	AND
+	tc.Vigente_Hasta = tmp.Vigente_Hasta
+	WHERE NOT EXISTS (
+		SELECT 1
+		FROM socios.Categoria_Socio cs
+		WHERE
+		cs.Nombre = tmp.Descripcion
+		);
+
+	DROP TABLE #TempImport_Tarifa_Cuota;
+END
+GO
+
 -- Importar asistencias a clases
-/* POR TERMINAR
+
 CREATE OR ALTER PROCEDURE importaciones.Import_Asistencias
 	@rutaArch NVARCHAR(255)
 AS
@@ -114,27 +220,47 @@ BEGIN
 		'''Excel 12.0;Database='+@rutaArch+';HDR=YES'','+
 		'''SELECT * FROM [presentismo_actividades$]'');
 	');
-
-
-
-	--El campo ASISTE presentaba espacios en blanco y caracteres duplicados, con LTRIM y RTRIM eliminamos los espacios en blanco y con LEFT nos quedamos con 1 caracter
 	
-	SELECT TOP 100 * FROM #TempImport_Asiste
-
-	
-	INSERT INTO club.Empleado(Nombre, Apellido)
-	SELECT
-		LEFT(tmp.Profesor,LEN(tmp.Profesor) - CHARINDEX(' ', REVERSE(tmp.Profesor)) + 1) AS Nombre,
-		LTRIM(RIGHT(tmp.Profesor, LEN(tmp.Profesor) - CHARINDEX(' ', tmp.Profesor))) AS Apellido
+	INSERT INTO club.Empleado(Nombre, Apellido, Area)
+	SELECT DISTINCT
+		LEFT(tmp.Profesor, LEN(tmp.Profesor) - CHARINDEX(' ', REVERSE(tmp.Profesor))) AS Nombre,
+		RIGHT(tmp.Profesor, CHARINDEX(' ', REVERSE(tmp.Profesor)) - 1) AS Apellido,
+		'Profesor' AS Area
 	FROM #TempImport_Asiste tmp
+	WHERE NOT EXISTS (
+		SELECT 1
+		FROM club.Empleado e
+		WHERE e.Nombre = LEFT(tmp.Profesor, LEN(tmp.Profesor) - CHARINDEX(' ', REVERSE(tmp.Profesor)) + 1)
+		  AND e.Apellido = LTRIM(RIGHT(tmp.Profesor, LEN(tmp.Profesor) - CHARINDEX(' ', tmp.Profesor)))
+	);
 
+	INSERT INTO actividades.Clase(Día_De_La_Semana, ID_Profesor, ID_Actividad)
+	SELECT DISTINCT
+		DATENAME(weekday, tmp.Fecha) AS Día_De_La_Semana,
+		ce.ID,
+		aa.ID
+	FROM #TempImport_Asiste tmp
+	JOIN club.Empleado ce ON LTRIM(RTRIM(tmp.Profesor)) = LTRIM(RTRIM(ce.Nombre)) + ' ' + LTRIM(RTRIM(ce.Apellido))
+	JOIN actividades.Actividad aa ON aa.Descripcion = tmp.Descripcion
+	WHERE NOT EXISTS (
+		SELECT 1
+		FROM actividades.Clase c
+		WHERE c.Día_De_La_Semana = DATENAME(weekday, tmp.Fecha)
+		  AND c.ID_Profesor = ce.ID
+		  AND c.ID_Actividad = aa.ID
+	);
+
+	-- Falta importar socios
 	/*
-	INSERT INTO actividades.Socio_Asiste_Clase (Fecha, Asiste, ID_Socio)
-	SELECT Fecha,Asiste,ID_Socio
-	FROM #TempImport_Asiste*/
-	
+	INSERT INTO actividades.Socio_Asiste_Clase (Fecha, Asiste, ID_Socio, ID_Clase)
+	SELECT Fecha,Asiste, ID_Socio, actividades.Clase.ID
+	FROM #TempImport_Asiste tmp
+	JOIN actividades.Clase ON datename(weekday, tmp.Fecha) = actividades.Clase.Día_De_La_Semana
+	JOIN club.Empleado ce ON LTRIM(RTRIM(tmp.Profesor)) = LTRIM(RTRIM(ce.Nombre)) + ' ' + LTRIM(RTRIM(ce.Apellido))
+	*/
+
 	DROP TABLE #TempImport_Asiste;
 END
 GO
 
-*/
+
