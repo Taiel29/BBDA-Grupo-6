@@ -372,9 +372,9 @@ BEGIN
 	-- esto es opcional. 
 	UPDATE soc
 	SET 
-		soc.Nro_Socio = NULL,
-		soc.DNI = 'encryp',
-		soc.Numero_De_Socio_OS = 'encryp',
+		-- soc.Nro_Socio = NULL, ocultar el original
+		-- soc.DNI = 'encryp', ocultar el original
+		--soc.Numero_De_Socio_OS = 'encryp', ocultar el original
 		soc.Fecha_Nacimiento = NULL,
 		soc.Nombre = 'encryp',
 		soc.Apellido = 'encryp',
@@ -387,7 +387,6 @@ BEGIN
 END;
 PRINT 'TRIGGER CREADO CORRECTAMENTE';
 GO
-
 
 /* DESENCRIPTAR TABLA EMPLEADO Y MOSTRAR
 
