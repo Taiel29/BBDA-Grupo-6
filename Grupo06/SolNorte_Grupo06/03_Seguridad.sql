@@ -10,7 +10,7 @@
 --Cropalati Franco Nicolas - DNI: 43404823
 --Miguez Alejo - DNI: 41667306
 
--- Creación de Login
+-- Creación de Login---
 
 USE master
 GO
@@ -103,7 +103,7 @@ BEGIN
 END
 GO
 
---- Creacion de users
+--- Creacion de users---
 USE Com2900G06
 GO
 IF DATABASE_PRINCIPAL_ID('user_Jefe_Tesoreria') IS NULL
@@ -135,59 +135,118 @@ IF DATABASE_PRINCIPAL_ID('user_Secretario') IS NULL
 
 IF DATABASE_PRINCIPAL_ID('user_Vocal') IS NULL
     CREATE USER user_Vocal FOR LOGIN login_Vocal WITH DEFAULT_SCHEMA = club;
-
---- Creación de roles
+GO
+--- Creación de roles---
 
 IF DATABASE_PRINCIPAL_ID('rol_Jefe_Tesoreria') IS NULL
-BEGIN
     CREATE ROLE rol_Jefe_Tesoreria AUTHORIZATION dbo;
-END;
 
 IF DATABASE_PRINCIPAL_ID('rol_Administrativo_Cobranza') IS NULL
-BEGIN
     CREATE ROLE rol_Administrativo_Cobranza AUTHORIZATION dbo;
-END;
 
 IF DATABASE_PRINCIPAL_ID('rol_Administrativo_Morosidad') IS NULL
-BEGIN
     CREATE ROLE rol_Administrativo_Morosidad AUTHORIZATION dbo;
-END;
 
 IF DATABASE_PRINCIPAL_ID('rol_Administrativo_Facturacion') IS NULL
-BEGIN
     CREATE ROLE rol_Administrativo_Facturacion AUTHORIZATION dbo;
-END;
 
 IF DATABASE_PRINCIPAL_ID('rol_Administrativo_Socio') IS NULL
-BEGIN
     CREATE ROLE rol_Administrativo_Socio AUTHORIZATION dbo;
-END;
 
 IF DATABASE_PRINCIPAL_ID('rol_Socios_Web') IS NULL
-BEGIN
     CREATE ROLE rol_Socios_Web AUTHORIZATION user_Administrativo_Socio;
-END;
 
 IF DATABASE_PRINCIPAL_ID('rol_Presidente') IS NULL
-BEGIN
     CREATE ROLE rol_Presidente AUTHORIZATION dbo;
-END;
 
 IF DATABASE_PRINCIPAL_ID('rol_Vicepresidente') IS NULL
-BEGIN
     CREATE ROLE rol_Vicepresidente AUTHORIZATION dbo;
-END;
 
 IF DATABASE_PRINCIPAL_ID('rol_Secretario') IS NULL
-BEGIN
     CREATE ROLE rol_Secretario AUTHORIZATION dbo;
-END;
 
 IF DATABASE_PRINCIPAL_ID('rol_Vocal') IS NULL
-BEGIN
     CREATE ROLE rol_Vocal AUTHORIZATION dbo;
-END;
+GO
 
--- Asignar miembros a roles
+-- Asignar usuarios a roles---
+ALTER ROLE rol_Jefe_Tesoreria ADD MEMBER user_Jefe_Tesoreria;
+ALTER ROLE rol_Administrativo_Cobranza ADD MEMBER user_Administrativo_Cobranza;
+ALTER ROLE rol_Administrativo_Morosidad ADD MEMBER user_Administrativo_Morosidad;
+ALTER ROLE rol_Administrativo_Facturacion ADD MEMBER user_Administrativo_Facturacion;
+ALTER ROLE rol_Administrativo_Socio ADD MEMBER user_Administrativo_Socio;
+ALTER ROLE rol_Socios_Web ADD MEMBER user_Socios_Web;
+ALTER ROLE rol_Presidente ADD MEMBER user_Presidente;
+ALTER ROLE rol_Vicepresidente ADD MEMBER user_Vicepresidente;
+ALTER ROLE rol_Secretario ADD MEMBER user_Secretario;
+ALTER ROLE rol_Vocal ADD MEMBER user_Vocal;
+GO
+---Asignar permisos a roles---
 
--- Asignar permisos a roles
+--Permisos para el jefe de tesoreria
+GRANT CONTROL ON SCHEMA::tesoreria TO rol_Jefe_Tesoreria;
+GRANT CONTROL ON SCHEMA::reportes TO rol_Jefe_Tesoreria;
+
+--Permisos para el administrativo de cobranza
+GRANT SELECT ON SCHEMA::tesoreria TO rol_Administrativo_Cobranza;
+GRANT UPDATE ON SCHEMA::tesoreria TO rol_Administrativo_Cobranza;
+GRANT SELECT ON socios.Socio TO rol_Administrativo_Cobranza;
+GRANT SELECT ON socios.Cuenta TO rol_Administrativo_Cobranza;
+GRANT EXECUTE ON SCHEMA::reportes TO rol_Administrativo_Cobranza;
+
+--Permisos para el administrativo de morosidad
+GRANT SELECT ON SCHEMA::tesoreria TO rol_Administrativo_Morosidad;
+GRANT UPDATE ON SCHEMA::tesoreria TO rol_Administrativo_Morosidad;
+GRANT SELECT ON socios.Socio TO rol_Administrativo_Morosidad;
+GRANT SELECT ON socios.Estado_Socio TO rol_Administrativo_Morosidad;
+GRANT UPDATE ON socios.Estado_Socio TO rol_Administrativo_Morosidad;
+GRANT EXECUTE ON SCHEMA::reportes TO rol_Administrativo_Morosidad;
+
+--Permisos para el administrativo de facturacion
+GRANT SELECT ON SCHEMA::tesoreria TO rol_Administrativo_Facturacion;
+GRANT UPDATE ON SCHEMA::tesoreria TO rol_Administrativo_Cobranza;
+GRANT SELECT ON SCHEMA::actividades TO rol_Administrativo_Facturacion;
+GRANT SELECT ON socios.Socio TO rol_Administrativo_Facturacion;
+GRANT SELECT ON socios.Estado_Socio TO rol_Administrativo_Facturacion;
+GRANT EXECUTE ON SCHEMA::reportes TO rol_Administrativo_Facturacion;
+
+--Permisos para el administrativo socio
+GRANT CONTROL ON SCHEMA::socios TO rol_Administrativo_Socio;
+GRANT UPDATE ON SCHEMA::socios TO rol_Administrativo_Socio;
+GRANT SELECT ON SCHEMA::actividades TO rol_Administrativo_Socio;
+GRANT UPDATE ON SCHEMA::actividades TO rol_Administrativo_Socio;
+
+--Permisos para el socio web
+GRANT SELECT ON SCHEMA::socios TO rol_Socios_Web;
+GRANT UPDATE ON socios.Socio TO rol_Socios_Web;
+GRANT SELECT ON socios.Grupo_Familiar TO rol_Socios_Web;
+GRANT UPDATE ON socios.Grupo_Familiar TO rol_Socios_Web;
+
+--Permisos para el presidente
+GRANT CONTROL ON SCHEMA::club TO rol_Presidente;
+GRANT EXECUTE ON SCHEMA::reportes TO rol_Presidente;
+GRANT EXECUTE ON SCHEMA::importaciones TO rol_Presidente;
+GRANT SELECT ON SCHEMA::socios TO rol_Presidente;
+GRANT SELECT ON SCHEMA::tesoreria TO rol_Presidente;
+GRANT SELECT ON SCHEMA::actividades TO rol_Presidente;
+
+--Permisos para el vice presidente
+GRANT SELECT ON SCHEMA::club TO rol_Vicepresidente;
+GRANT UPDATE ON SCHEMA::club TO rol_Vicepresidente;
+GRANT EXECUTE ON SCHEMA::reportes TO rol_Vicepresidente;
+GRANT SELECT ON SCHEMA::socios TO rol_Vicepresidente;
+GRANT SELECT ON SCHEMA::tesoreria TO rol_Vicepresidente;
+GRANT SELECT ON SCHEMA::actividades TO rol_Vicepresidente;
+
+--Permisos para el secretario
+GRANT SELECT ON SCHEMA::club TO rol_Secretario;
+GRANT EXECUTE ON SCHEMA::reportes TO rol_Secretario;
+GRANT SELECT ON SCHEMA::socios TO rol_Secretario;
+GRANT SELECT ON SCHEMA::tesoreria TO rol_Secretario;
+GRANT SELECT ON SCHEMA::actividades TO rol_Secretario;
+
+--Permisos para el vocal
+GRANT SELECT ON SCHEMA::club TO rol_Vocal;
+GRANT SELECT ON SCHEMA::socios TO rol_Vocal;
+GRANT SELECT ON SCHEMA::tesoreria TO rol_Vocal;
+GRANT SELECT ON SCHEMA::actividades TO rol_Vocal;
