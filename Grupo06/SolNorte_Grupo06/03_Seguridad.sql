@@ -358,9 +358,9 @@ BEGIN
     -- Encriptar y actualizar las columnas encriptadas
     UPDATE soc
     SET 
-        soc.Nro_Socio_Enc = ENCRYPTBYPASSPHRASE(@password, i.Nro_Socio),
-        soc.DNI_Enc = ENCRYPTBYPASSPHRASE(@password, i.DNI),
-        soc.Numero_De_Socio_OS_Enc = ENCRYPTBYPASSPHRASE(@password, i.Numero_De_Socio_OS),
+        soc.Nro_Socio = ENCRYPTBYPASSPHRASE(@password, i.Nro_Socio),
+        soc.DNI = ENCRYPTBYPASSPHRASE(@password, i.DNI),
+        soc.Numero_De_Socio_OS = ENCRYPTBYPASSPHRASE(@password, i.Numero_De_Socio_OS),
         soc.Fecha_Nacimiento_Enc = ENCRYPTBYPASSPHRASE(@password, CONVERT(VARCHAR, i.Fecha_Nacimiento, 23)),
         soc.Nombre_Enc = ENCRYPTBYPASSPHRASE(@password, i.Nombre),
         soc.Apellido_Enc = ENCRYPTBYPASSPHRASE(@password, i.Apellido),
@@ -374,9 +374,9 @@ BEGIN
 	-- esto es opcional. 
 	UPDATE soc
 	SET 
-		-- soc.Nro_Socio = NULL, ocultar el original
-		-- soc.DNI = 'encryp', ocultar el original
-		--soc.Numero_De_Socio_OS = 'encryp', ocultar el original
+		soc.Nro_Socio_Enc = soc.Nro_Socio, 
+		soc.DNI_Enc = soc.DNI, 
+		soc.Numero_De_Socio_OS_Enc = soc.Numero_De_Socio_OS, 
 		soc.Fecha_Nacimiento = NULL,
 		soc.Nombre = 'encryp',
 		soc.Apellido = 'encryp',
