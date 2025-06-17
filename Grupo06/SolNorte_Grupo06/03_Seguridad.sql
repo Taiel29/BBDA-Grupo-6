@@ -403,19 +403,47 @@ SELECT
 	CONVERT(VARCHAR(20), DECRYPTBYPASSPHRASE('password', Telefono_De_Emergencia_Enc)) AS Telefono_De_Emergencia
 FROM club.Empleado;
 
+-- seteamos en el original
+	UPDATE emp
+	SET 
+		emp.Nombre = emp.Nombre_Enc,
+		emp.Apellido = emp.Apellido_Enc,
+		emp.DNI = emp.DNI_Enc,
+		emp.Fecha_Nacimiento = emp.Fecha_Nacimiento_Enc,
+		emp.Area = emp.Area_Enc,
+		emp.Telefono_De_Contacto = emp.Telefono_De_Contacto_Enc,
+		emp.Telefono_De_Emergencia = emp.Telefono_De_Emergencia_Enc
+	FROM club.Empleado emp
+	INNER JOIN inserted i ON emp.ID = i.ID;
+
 	DESENCRIPTAR TABLA EMPLEADO Y MOSTRAR
-SELECT 
-	ID AS id_socio,
-	CONVERT(CHAR(7), DECRYPTBYPASSPHRASE('password', Nro_Socio_Enc)) AS Nro_Socio,
-	CONVERT(CHAR(9), DECRYPTBYPASSPHRASE('password', DNI_Enc)) AS DNI,
-	CONVERT(INT, DECRYPTBYPASSPHRASE('password', Numero_De_Socio_OS_Enc)) AS Numero_De_Socio_OS,
-	CONVERT(DATE, DECRYPTBYPASSPHRASE('password', Fecha_Nacimiento_Enc)) AS Fecha_Nacimiento,
-	CONVERT(VARCHAR(50), DECRYPTBYPASSPHRASE('password', Nombre_Enc)) AS Nombre,
-	CONVERT(VARCHAR(50), DECRYPTBYPASSPHRASE('password', Apellido_Enc)) AS Apellido,
-	CONVERT(VARCHAR(50), DECRYPTBYPASSPHRASE('password', Nombre_Obra_Social_Enc)) AS Nombre_Obra_Social,
-	CONVERT(VARCHAR(20), DECRYPTBYPASSPHRASE('password', Telefono_De_Emergencias_OS_Enc)) AS Telefono_De_Emergencias_OS,
-	CONVERT(VARCHAR(20), DECRYPTBYPASSPHRASE('password', Telefono_Contacto_Emergencia_Enc)) AS Telefono_Contacto_Emergencia,
-	CONVERT(VARCHAR(20), DECRYPTBYPASSPHRASE('password', Telefono_Contacto_Enc)) AS Telefono_Contacto
-FROM socios.Socio;
+	SELECT 
+		ID AS id_socio,
+		CONVERT(CHAR(7), DECRYPTBYPASSPHRASE('password', Nro_Socio_Enc)) AS Nro_Socio,
+		CONVERT(CHAR(9), DECRYPTBYPASSPHRASE('password', DNI_Enc)) AS DNI,
+		CONVERT(INT, DECRYPTBYPASSPHRASE('password', Numero_De_Socio_OS_Enc)) AS Numero_De_Socio_OS,
+		CONVERT(DATE, DECRYPTBYPASSPHRASE('password', Fecha_Nacimiento_Enc)) AS Fecha_Nacimiento,
+		CONVERT(VARCHAR(50), DECRYPTBYPASSPHRASE('password', Nombre_Enc)) AS Nombre,
+		CONVERT(VARCHAR(50), DECRYPTBYPASSPHRASE('password', Apellido_Enc)) AS Apellido,
+		CONVERT(VARCHAR(50), DECRYPTBYPASSPHRASE('password', Nombre_Obra_Social_Enc)) AS Nombre_Obra_Social,
+		CONVERT(VARCHAR(20), DECRYPTBYPASSPHRASE('password', Telefono_De_Emergencias_OS_Enc)) AS Telefono_De_Emergencias_OS,
+		CONVERT(VARCHAR(20), DECRYPTBYPASSPHRASE('password', Telefono_Contacto_Emergencia_Enc)) AS Telefono_Contacto_Emergencia,
+		CONVERT(VARCHAR(20), DECRYPTBYPASSPHRASE('password', Telefono_Contacto_Enc)) AS Telefono_Contacto
+	FROM socios.Socio;
+	
+	UPDATE soc
+	SET 
+		-- soc.Nro_Socio = NULL, ocultar el original
+		-- soc.DNI = 'encryp', ocultar el original
+		--soc.Numero_De_Socio_OS = 'encryp', ocultar el original
+		soc.Fecha_Nacimiento = soc.Fecha_Nacimiento_Enc,
+		soc.Nombre = soc.Nombre_Enc,
+		soc.Apellido = soc.Apellido_Enc,
+		soc.Nombre_Obra_Social = soc.Nombre_Obra_Social_Enc,
+		soc.Telefono_De_Emergencias_OS = soc.Telefono_De_Emergencias_OS_Enc,
+		soc.Telefono_Contacto = soc.Telefono_Contacto_Enc,
+		soc.Telefono_Contacto_Emergencia = soc.Telefono_Contacto_Emergencia_Enc
+	FROM socios.Socio soc
+	INNER JOIN inserted i ON soc.ID = i.ID;
 
 */
