@@ -289,13 +289,13 @@ BEGIN
 		-- Encriptar y actualizar las columnas encriptadas
 		UPDATE emp
 		SET 
-			emp.Nombre_Enc = ENCRYPTBYPASSPHRASE('EkAHYL]cv92=#Z!1EuDH', i.Nombre),
-			emp.Apellido_Enc = ENCRYPTBYPASSPHRASE('EkAHYL]cv92=#Z!1EuDH', i.Apellido),
-			emp.DNI_Enc = ENCRYPTBYPASSPHRASE('EkAHYL]cv92=#Z!1EuDH', i.DNI),
-			emp.Fecha_Nacimiento_Enc = ENCRYPTBYPASSPHRASE('EkAHYL]cv92=#Z!1EuDH', CONVERT(VARCHAR, i.Fecha_Nacimiento, 23)),
-			emp.Area_Enc = ENCRYPTBYPASSPHRASE('EkAHYL]cv92=#Z!1EuDH', i.Area),
-			emp.Telefono_De_Contacto_Enc = ENCRYPTBYPASSPHRASE('EkAHYL]cv92=#Z!1EuDH', CAST(i.Telefono_De_Contacto AS VARCHAR)),
-			emp.Telefono_De_Emergencia_Enc = ENCRYPTBYPASSPHRASE('EkAHYL]cv92=#Z!1EuDH', CAST(i.Telefono_De_Emergencia AS VARCHAR))
+			emp.Nombre_Enc = ENCRYPTBYPASSPHRASE(@password, i.Nombre),
+			emp.Apellido_Enc = ENCRYPTBYPASSPHRASE(@password, i.Apellido),
+			emp.DNI_Enc = ENCRYPTBYPASSPHRASE(@password, i.DNI),
+			emp.Fecha_Nacimiento_Enc = ENCRYPTBYPASSPHRASE(@password, CONVERT(VARCHAR, i.Fecha_Nacimiento, 23)),
+			emp.Area_Enc = ENCRYPTBYPASSPHRASE(@password, i.Area),
+			emp.Telefono_De_Contacto_Enc = ENCRYPTBYPASSPHRASE(@password, CAST(i.Telefono_De_Contacto AS VARCHAR)),
+			emp.Telefono_De_Emergencia_Enc = ENCRYPTBYPASSPHRASE(@password, CAST(i.Telefono_De_Emergencia AS VARCHAR))
 		FROM club.Empleado emp
 		INNER JOIN inserted i ON emp.ID = i.ID;
 
@@ -358,16 +358,16 @@ BEGIN
     -- Encriptar y actualizar las columnas encriptadas
     UPDATE soc
     SET 
-        soc.Nro_Socio_Enc = ENCRYPTBYPASSPHRASE('EkAHYL]cv92=#Z!1EuDH', i.Nro_Socio),
-        soc.DNI_Enc = ENCRYPTBYPASSPHRASE('EkAHYL]cv92=#Z!1EuDH', i.DNI),
-        soc.Numero_De_Socio_OS_Enc = ENCRYPTBYPASSPHRASE('EkAHYL]cv92=#Z!1EuDH', i.Numero_De_Socio_OS),
-        soc.Fecha_Nacimiento_Enc = ENCRYPTBYPASSPHRASE('EkAHYL]cv92=#Z!1EuDH', CONVERT(VARCHAR, i.Fecha_Nacimiento, 23)),
-        soc.Nombre_Enc = ENCRYPTBYPASSPHRASE('EkAHYL]cv92=#Z!1EuDH', i.Nombre),
-        soc.Apellido_Enc = ENCRYPTBYPASSPHRASE('EkAHYL]cv92=#Z!1EuDH', i.Apellido),
-        soc.Nombre_Obra_Social_Enc = ENCRYPTBYPASSPHRASE('EkAHYL]cv92=#Z!1EuDH', i.Nombre_Obra_Social),
-        soc.Telefono_De_Emergencias_OS_Enc = ENCRYPTBYPASSPHRASE('EkAHYL]cv92=#Z!1EuDH', CAST(i.Telefono_De_Emergencias_OS AS VARCHAR)),
-        soc.Telefono_Contacto_Enc = ENCRYPTBYPASSPHRASE('EkAHYL]cv92=#Z!1EuDH', CAST(i.Telefono_Contacto AS VARCHAR)),
-        soc.Telefono_Contacto_Emergencia_Enc = ENCRYPTBYPASSPHRASE('EkAHYL]cv92=#Z!1EuDH', CAST(i.Telefono_Contacto_Emergencia AS VARCHAR))
+        soc.Nro_Socio_Enc = ENCRYPTBYPASSPHRASE(@password, i.Nro_Socio),
+        soc.DNI_Enc = ENCRYPTBYPASSPHRASE(@password, i.DNI),
+        soc.Numero_De_Socio_OS_Enc = ENCRYPTBYPASSPHRASE(@password, i.Numero_De_Socio_OS),
+        soc.Fecha_Nacimiento_Enc = ENCRYPTBYPASSPHRASE(@password, CONVERT(VARCHAR, i.Fecha_Nacimiento, 23)),
+        soc.Nombre_Enc = ENCRYPTBYPASSPHRASE(@password, i.Nombre),
+        soc.Apellido_Enc = ENCRYPTBYPASSPHRASE(@password, i.Apellido),
+        soc.Nombre_Obra_Social_Enc = ENCRYPTBYPASSPHRASE(@password, i.Nombre_Obra_Social),
+        soc.Telefono_De_Emergencias_OS_Enc = ENCRYPTBYPASSPHRASE(@password, CAST(i.Telefono_De_Emergencias_OS AS VARCHAR)),
+        soc.Telefono_Contacto_Enc = ENCRYPTBYPASSPHRASE(@password, CAST(i.Telefono_Contacto AS VARCHAR)),
+        soc.Telefono_Contacto_Emergencia_Enc = ENCRYPTBYPASSPHRASE(@password, CAST(i.Telefono_Contacto_Emergencia AS VARCHAR))
     FROM socios.Socio soc
     INNER JOIN inserted i ON soc.ID = i.ID;
 
@@ -392,58 +392,53 @@ GO
 
 /* DESENCRIPTAR TABLA EMPLEADO Y MOSTRAR
 
-SELECT 
-	ID AS id_empleado,
-	CONVERT(VARCHAR, DECRYPTBYPASSPHRASE('password', Nombre_Enc)) AS Nombre,
-	CONVERT(VARCHAR, DECRYPTBYPASSPHRASE('password', Apellido_Enc)) AS Apellido,
-	CONVERT(CHAR(9), DECRYPTBYPASSPHRASE('password', DNI_Enc)) AS DNI,
-	CONVERT(DATE, DECRYPTBYPASSPHRASE('password', Fecha_Nacimiento_Enc)) AS Fecha_Nacimiento,
-	CONVERT(VARCHAR(20), DECRYPTBYPASSPHRASE('password', Area_Enc)) AS Area,
-	CONVERT(VARCHAR(20), DECRYPTBYPASSPHRASE('password', Telefono_De_Contacto_Enc)) AS Telefono_De_Contacto,
-	CONVERT(VARCHAR(20), DECRYPTBYPASSPHRASE('password', Telefono_De_Emergencia_Enc)) AS Telefono_De_Emergencia
-FROM club.Empleado;
+	CREATE OR ALTER PROCEDURE sp_DesencriptarEmpleado
+		@password NVARCHAR(100)
+	AS
+	BEGIN
+		SET NOCOUNT ON;
 
--- seteamos en el original
-	UPDATE emp
-	SET 
-		emp.Nombre = emp.Nombre_Enc,
-		emp.Apellido = emp.Apellido_Enc,
-		emp.DNI = emp.DNI_Enc,
-		emp.Fecha_Nacimiento = emp.Fecha_Nacimiento_Enc,
-		emp.Area = emp.Area_Enc,
-		emp.Telefono_De_Contacto = emp.Telefono_De_Contacto_Enc,
-		emp.Telefono_De_Emergencia = emp.Telefono_De_Emergencia_Enc
-	FROM club.Empleado emp
-	INNER JOIN inserted i ON emp.ID = i.ID;
+		UPDATE emp
+		SET 
+			Nombre = CONVERT(VARCHAR(50), DECRYPTBYPASSPHRASE(@password, Nombre_Enc)),
+			Apellido = CONVERT(VARCHAR(50), DECRYPTBYPASSPHRASE(@password, Apellido_Enc)),
+			DNI = CONVERT(CHAR(9), DECRYPTBYPASSPHRASE(@password, DNI_Enc)),
+			Fecha_Nacimiento = CONVERT(DATE, DECRYPTBYPASSPHRASE(@password, Fecha_Nacimiento_Enc)),
+			Area = CONVERT(VARCHAR(20), DECRYPTBYPASSPHRASE(@password, Area_Enc)),
+			Telefono_De_Contacto = CONVERT(VARCHAR(20), DECRYPTBYPASSPHRASE(@password, Telefono_De_Contacto_Enc)),
+			Telefono_De_Emergencia = CONVERT(VARCHAR(20), DECRYPTBYPASSPHRASE(@password, Telefono_De_Emergencia_Enc))
+		FROM club.Empleado emp;
+	END;
+	GO
 
-	DESENCRIPTAR TABLA EMPLEADO Y MOSTRAR
-	SELECT 
-		ID AS id_socio,
-		CONVERT(CHAR(7), DECRYPTBYPASSPHRASE('password', Nro_Socio_Enc)) AS Nro_Socio,
-		CONVERT(CHAR(9), DECRYPTBYPASSPHRASE('password', DNI_Enc)) AS DNI,
-		CONVERT(INT, DECRYPTBYPASSPHRASE('password', Numero_De_Socio_OS_Enc)) AS Numero_De_Socio_OS,
-		CONVERT(DATE, DECRYPTBYPASSPHRASE('password', Fecha_Nacimiento_Enc)) AS Fecha_Nacimiento,
-		CONVERT(VARCHAR(50), DECRYPTBYPASSPHRASE('password', Nombre_Enc)) AS Nombre,
-		CONVERT(VARCHAR(50), DECRYPTBYPASSPHRASE('password', Apellido_Enc)) AS Apellido,
-		CONVERT(VARCHAR(50), DECRYPTBYPASSPHRASE('password', Nombre_Obra_Social_Enc)) AS Nombre_Obra_Social,
-		CONVERT(VARCHAR(20), DECRYPTBYPASSPHRASE('password', Telefono_De_Emergencias_OS_Enc)) AS Telefono_De_Emergencias_OS,
-		CONVERT(VARCHAR(20), DECRYPTBYPASSPHRASE('password', Telefono_Contacto_Emergencia_Enc)) AS Telefono_Contacto_Emergencia,
-		CONVERT(VARCHAR(20), DECRYPTBYPASSPHRASE('password', Telefono_Contacto_Enc)) AS Telefono_Contacto
-	FROM socios.Socio;
-	
-	UPDATE soc
-	SET 
-		-- soc.Nro_Socio = NULL, ocultar el original
-		-- soc.DNI = 'encryp', ocultar el original
-		--soc.Numero_De_Socio_OS = 'encryp', ocultar el original
-		soc.Fecha_Nacimiento = soc.Fecha_Nacimiento_Enc,
-		soc.Nombre = soc.Nombre_Enc,
-		soc.Apellido = soc.Apellido_Enc,
-		soc.Nombre_Obra_Social = soc.Nombre_Obra_Social_Enc,
-		soc.Telefono_De_Emergencias_OS = soc.Telefono_De_Emergencias_OS_Enc,
-		soc.Telefono_Contacto = soc.Telefono_Contacto_Enc,
-		soc.Telefono_Contacto_Emergencia = soc.Telefono_Contacto_Emergencia_Enc
-	FROM socios.Socio soc
-	INNER JOIN inserted i ON soc.ID = i.ID;
+EXEC sp_DesencriptarEmpleado @password = 'EkAHYL]cv92=#Z!1EuDH';
+
+
+
+
+	DESENCRIPTAR TABLA SOCIO Y MOSTRAR
+	CREATE OR ALTER PROCEDURE sp_DesencriptarSocio
+		@password NVARCHAR(100)
+	AS
+	BEGIN
+		SET NOCOUNT ON;
+
+		UPDATE soc
+		SET 
+			Nro_Socio = CONVERT(CHAR(7), DECRYPTBYPASSPHRASE(@password, Nro_Socio_Enc)),
+			DNI = CONVERT(CHAR(9), DECRYPTBYPASSPHRASE(@password, DNI_Enc)),
+			Numero_De_Socio_OS = CONVERT(INT, DECRYPTBYPASSPHRASE(@password, Numero_De_Socio_OS_Enc)),
+			Fecha_Nacimiento = CONVERT(DATE, DECRYPTBYPASSPHRASE(@password, Fecha_Nacimiento_Enc)),
+			Nombre = CONVERT(VARCHAR(50), DECRYPTBYPASSPHRASE(@password, Nombre_Enc)),
+			Apellido = CONVERT(VARCHAR(50), DECRYPTBYPASSPHRASE(@password, Apellido_Enc)),
+			Nombre_Obra_Social = CONVERT(VARCHAR(50), DECRYPTBYPASSPHRASE(@password, Nombre_Obra_Social_Enc)),
+			Telefono_De_Emergencias_OS = CONVERT(VARCHAR(20), DECRYPTBYPASSPHRASE(@password, Telefono_De_Emergencias_OS_Enc)),
+			Telefono_Contacto = CONVERT(VARCHAR(20), DECRYPTBYPASSPHRASE(@password, Telefono_Contacto_Enc)),
+			Telefono_Contacto_Emergencia = CONVERT(VARCHAR(20), DECRYPTBYPASSPHRASE(@password, Telefono_Contacto_Emergencia_Enc))
+	  FROM socios.Socio soc;
+	END;
+	GO
+
+EXEC sp_DesencriptarSocio @password = 'EkAHYL]cv92=#Z!1EuDH';
 
 */
