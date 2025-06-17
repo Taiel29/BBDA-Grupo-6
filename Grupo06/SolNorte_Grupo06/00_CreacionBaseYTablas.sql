@@ -12,7 +12,7 @@
 
 IF EXISTS (SELECT name FROM sys.databases WHERE name = N'Com2900G06')
 BEGIN
-    USE master
+    USE master	
 
 	ALTER DATABASE Com2900G06
 	SET SINGLE_USER
@@ -112,6 +112,7 @@ CREATE TABLE socios.Socio(
 	FOREIGN KEY(ID_Grupo_Familiar) REFERENCES socios.Grupo_Familiar(ID) ON DELETE SET NULL,
 	FOREIGN KEY(ID_Categoria_Socio) REFERENCES socios.Categoria_Socio(ID) ON DELETE CASCADE,
 	CONSTRAINT CK_ID_SOCIO CHECK (Nro_Socio LIKE '[A-Z][A-Z]-[0-9][0-9][0-9][0-9]')
+
 );
 
 IF OBJECT_ID(N'socios.Cuenta', N'U') IS NOT NULL

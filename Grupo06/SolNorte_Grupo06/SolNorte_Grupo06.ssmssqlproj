@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
-<SqlWorkbenchSqlProject xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Name="SolNorte_Grupo06">
+<SqlWorkbenchSqlProject xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" Name="SolNorte_Grupo06">
   <Items>
-    <LogicalFolder Name="Conexiones" Type="2" Sorted="true">
+    <LogicalFolder Name="Connections" Type="2" Sorted="true">
       <Items>
         <ConnectionNode Name="CROPA-PC\SQLEXPRESS01:">
           <Created>2025-06-12T21:55:22.4808344-03:00</Created>
@@ -18,12 +18,27 @@
           <ConnectionProtocol>NotSpecified</ConnectionProtocol>
           <ApplicationName>Microsoft SQL Server Management Studio - Query</ApplicationName>
         </ConnectionNode>
-        <ConnectionNode Name="TAIELPC:TAIELPC\taiel">
+        <ConnectionNode Name="RAMA-PC\SQLEXPRESS:RAMA-PC\ramir">
+          <Created>2025-06-17T16:54:51.9273769-03:00</Created>
+          <Type>SQL</Type>
+          <Server>RAMA-PC\SQLEXPRESS</Server>
+          <UserName />
+          <Authentication>Windows Authentication</Authentication>
+          <InitialDB />
+          <LoginTimeout>30</LoginTimeout>
+          <TrustServerCertificate>True</TrustServerCertificate>
+          <HostNameInServerCertificate />
+          <EncryptionOption>True</EncryptionOption>
+          <ExecutionTimeout>0</ExecutionTimeout>
+          <ConnectionProtocol>NotSpecified</ConnectionProtocol>
+          <ApplicationName>Microsoft SQL Server Management Studio - Query</ApplicationName>
+        </ConnectionNode>
+        <ConnectionNode Name="TAIELPC:">
           <Created>2025-06-12T23:15:53.0846579-03:00</Created>
           <Type>SQL</Type>
           <Server>TAIELPC</Server>
           <UserName />
-          <Authentication>Autenticación de Windows</Authentication>
+          <Authentication>SQL</Authentication>
           <InitialDB>master</InitialDB>
           <LoginTimeout>30</LoginTimeout>
           <TrustServerCertificate>True</TrustServerCertificate>
@@ -35,11 +50,11 @@
         </ConnectionNode>
       </Items>
     </LogicalFolder>
-    <LogicalFolder Name="Consultas" Type="0" Sorted="true">
+    <LogicalFolder Name="Queries" Type="0" Sorted="true">
       <Items>
         <FileNode Name="00_CreacionBaseYTablas.sql">
-          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:TAIELPC:True</AssociatedConnectionMoniker>
-          <AssociatedConnSrvName>TAIELPC</AssociatedConnSrvName>
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:RAMA-PC\SQLEXPRESS:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>RAMA-PC\SQLEXPRESS</AssociatedConnSrvName>
           <AssociatedConnUserName />
           <FullPath>00_CreacionBaseYTablas.sql</FullPath>
         </FileNode>
@@ -56,14 +71,14 @@
           <FullPath>02_CreacionSPReportes.sql</FullPath>
         </FileNode>
         <FileNode Name="03_Seguridad.sql">
-          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:TAIELPC:True</AssociatedConnectionMoniker>
-          <AssociatedConnSrvName>TAIELPC</AssociatedConnSrvName>
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:RAMA-PC\SQLEXPRESS:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>RAMA-PC\SQLEXPRESS</AssociatedConnSrvName>
           <AssociatedConnUserName />
           <FullPath>03_Seguridad.sql</FullPath>
         </FileNode>
       </Items>
     </LogicalFolder>
-    <LogicalFolder Name="Varios" Type="3" Sorted="true">
+    <LogicalFolder Name="Miscellaneous" Type="3" Sorted="true">
       <Items />
     </LogicalFolder>
   </Items>

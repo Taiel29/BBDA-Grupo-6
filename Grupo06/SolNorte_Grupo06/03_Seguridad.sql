@@ -390,7 +390,7 @@ END;
 PRINT 'TRIGGER CREADO CORRECTAMENTE';
 GO
 
-/* DESENCRIPTAR TABLA EMPLEADO Y MOSTRAR
+--DESENCRIPTAR TABLA EMPLEADO Y MOSTRAR
 
 	CREATE OR ALTER PROCEDURE sp_DesencriptarEmpleado
 		@password NVARCHAR(100)
@@ -411,12 +411,13 @@ GO
 	END;
 	GO
 
-EXEC sp_DesencriptarEmpleado @password = 'EkAHYL]cv92=#Z!1EuDH';
+--EXEC sp_DesencriptarEmpleado @password = 'EkAHYL]cv92=#Z!1EuDH';
 
 
 
 
-	DESENCRIPTAR TABLA SOCIO Y MOSTRAR
+--DESENCRIPTAR TABLA SOCIO Y MOSTRAR
+
 	CREATE OR ALTER PROCEDURE sp_DesencriptarSocio
 		@password NVARCHAR(100)
 	AS
@@ -439,6 +440,4 @@ EXEC sp_DesencriptarEmpleado @password = 'EkAHYL]cv92=#Z!1EuDH';
 	END;
 	GO
 
-EXEC sp_DesencriptarSocio @password = 'EkAHYL]cv92=#Z!1EuDH';
-
-*/
+--EXEC sp_DesencriptarSocio @password = 'EkAHYL]cv92=#Z!1EuDH';
