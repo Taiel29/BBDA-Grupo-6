@@ -100,18 +100,18 @@ CREATE TABLE socios.Socio(
 	Fecha_Nacimiento DATE,
 	Apellido VARCHAR(50) NOT NULL,
 	Nombre VARCHAR(50) NOT NULL,
-	Numero_De_Socio_OS INT NOT NULL UNIQUE,
-	Telefono_De_Emergencias_OS INT NOT NULL,
-	Telefono_Contacto_Emergencia INT NOT NULL,
+	Numero_De_Socio_OS VARCHAR(50) NOT NULL UNIQUE,
+	Telefono_De_Emergencias_OS VARCHAR(50) NOT NULL,
+	Telefono_Contacto_Emergencia VARCHAR(50) NOT NULL,
 	Nombre_Obra_Social VARCHAR(50),
-	Telefono_Contacto INT,
+	Telefono_Contacto VARCHAR(50),
 	ID_Estado_Socio INT,
 	ID_Grupo_Familiar INT,
 	ID_Categoria_Socio INT,
 	FOREIGN KEY(ID_Estado_Socio) REFERENCES socios.Estado_Socio(ID) ON DELETE CASCADE,
 	FOREIGN KEY(ID_Grupo_Familiar) REFERENCES socios.Grupo_Familiar(ID) ON DELETE SET NULL,
 	FOREIGN KEY(ID_Categoria_Socio) REFERENCES socios.Categoria_Socio(ID) ON DELETE CASCADE,
-	CONSTRAINT CK_ID_SOCIO CHECK (ID LIKE '[A-Z][A-Z]-[0-9][0-9][0-9][0-9]')
+	CONSTRAINT CK_ID_SOCIO CHECK (Nro_Socio LIKE '[A-Z][A-Z]-[0-9][0-9][0-9][0-9]')
 );
 
 IF OBJECT_ID(N'socios.Cuenta', N'U') IS NOT NULL
@@ -554,7 +554,7 @@ IF EXISTS (SELECT 1 FROM sys.triggers WHERE name='trg_Empleado_Encrypt')
     DROP TRIGGER club.trg_Empleado_Encrypt;
 GO
 
-CREATE TRIGGER club.trg_Empleado_Encrypt
+/*CREATE TRIGGER club.trg_Empleado_Encrypt
 ON club.Empleado
 AFTER INSERT
 AS
@@ -578,7 +578,7 @@ BEGIN
 			emp.Nombre = NULL,
 			emp.Apellido = NULL,
 			emp.DNI = NULL,
-			emp.Fecha_De_Nacimiento = NULL,
+			emp.Fecha_Nacimiento = NULL,
 			emp.Area = NULL,
 			emp.Telefono_De_Contacto = NULL,
 			emp.Telefono_De_Emergencia = NULL
@@ -587,7 +587,7 @@ BEGIN
 END;
 PRINT 'TRIGGER CREADO CORRECTAMENTE';
 
-GO
+GO*/
 
 -- AGREGO CAMPOS A ENCRIPTAR PARA NO PISAR LOS DATOS ORIGINALES (socio)
 
@@ -623,7 +623,7 @@ IF EXISTS (SELECT 1 FROM sys.triggers WHERE name='trg_Socio_Encrypt')
     DROP TRIGGER socios.trg_Socio_Encrypt;
 GO
 
-CREATE TRIGGER socios.trg_Socio_Encrypt
+/*CREATE TRIGGER socios.trg_Socio_Encrypt
 ON socios.Socio
 AFTER INSERT
 AS
@@ -661,7 +661,7 @@ BEGIN
 	INNER JOIN inserted i ON soc.ID = i.ID;
 END;
 PRINT 'TRIGGER CREADO CORRECTAMENTE';
-GO
+GO*/
 
 
 /* DESENCRIPTAR TABLA EMPLEADO Y MOSTRAR
@@ -695,3 +695,9 @@ SELECT
 FROM socios.Socio;
 
 */
+
+--VER COMO CARGAR ESTOS DATOS
+INSERT INTO socios.Estado_Socio VALUES
+('ACTIVO'),
+('MOROSO'),
+('INACTIVO');

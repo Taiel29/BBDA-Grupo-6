@@ -58,3 +58,9 @@ EXEC importaciones.Import_Tarifas_Pileta
     @rutaArch = 'C:\Users\Public\Documents\Datos socios.xlsx'
 
 SELECT * FROM tesoreria.Tarifa_Pileta
+
+
+EXEC importaciones.ImportarSociosDesdeExcel
+	@RutaExcel = 'C:\Users\Public\Documents\Datos socios.xlsx'
+
+SELECT * FROM socios.Socio

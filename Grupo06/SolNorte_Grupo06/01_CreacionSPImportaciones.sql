@@ -263,4 +263,123 @@ BEGIN
 END
 GO
 
+CREATE OR ALTER PROCEDURE importaciones.ImportarSociosDesdeExcel
+    @RutaExcel NVARCHAR(260)
+AS
+BEGIN
+    SET NOCOUNT ON;
 
+    IF OBJECT_ID('#SociosExcel') IS NOT NULL
+        DROP TABLE #SociosExcel;
+
+    CREATE TABLE #SociosExcel (
+        ID INT IDENTITY(1,1) PRIMARY KEY,
+        nro CHAR(8),
+        nombre VARCHAR(50),
+        apellido VARCHAR(50),
+        DNI CHAR(9),
+        email VARCHAR(150),
+        fecha DATE,
+        telefono_contacto VARCHAR(50),
+        telefono_contacto_emergencia VARCHAR(50),
+        nombre_OS VARCHAR(50),
+        nro_OS VARCHAR(50),
+        telefono_contacto_emergencia_OS VARCHAR(50)
+    );
+
+    DECLARE @sql NVARCHAR(MAX) = '
+    INSERT INTO #SociosExcel (
+        nro, nombre, apellido, DNI, email, fecha,
+        telefono_contacto, telefono_contacto_emergencia,
+        nombre_OS, nro_OS, telefono_contacto_emergencia_OS
+    )
+    SELECT
+        Ltrim(rtrim(F1)),
+        Ltrim(rtrim(F2)),
+        Ltrim(rtrim(F3)),
+		LTRIM(RTRIM(LEFT(CAST(CONVERT(BIGINT, F4) AS VARCHAR), 8))),
+        Ltrim(rtrim(F5)),
+        Ltrim(rtrim(F6)),
+		LTRIM(RTRIM(CAST(CONVERT(BIGINT, F7) AS VARCHAR))),
+		LTRIM(RTRIM(CAST(CONVERT(BIGINT, F8) AS VARCHAR))),
+        Ltrim(rtrim(F9)),
+        Ltrim(rtrim(F10)),
+        Ltrim(rtrim(F11))
+    FROM OPENROWSET(
+        ''Microsoft.ACE.OLEDB.16.0'',
+        ''Excel 12.0;Database=' + @RutaExcel + ';HDR=NO'',
+        ''SELECT * FROM [Responsables de Pago$A2:K]''
+    );
+    ';
+
+    EXEC sp_executesql @sql;
+
+    SELECT * FROM #SociosExcel;
+
+	WITH DatosValidos AS (
+		SELECT *
+		FROM #SociosExcel s
+		WHERE 
+			fecha IS NOT NULL
+			AND NOT EXISTS (
+				SELECT 1 FROM socios.Socio so WHERE so.DNI = s.DNI
+			)
+			AND NOT EXISTS (
+				SELECT 1 FROM socios.Socio so WHERE so.Numero_De_Socio_OS = s.nro_OS
+			)
+			AND NOT EXISTS (
+				SELECT 1 FROM #SociosExcel s2 WHERE s2.DNI = s.DNI AND s2.ID < s.ID
+			)
+			AND NOT EXISTS (
+				SELECT 1 FROM #SociosExcel s2 WHERE s2.nro_OS = s.nro_OS AND s2.ID < s.ID
+		)
+	),
+	DatosInvalidos AS (
+		SELECT DNI
+		FROM #SociosExcel
+		WHERE fecha IS NULL
+	)
+
+	-- Insertar los válidos
+	INSERT INTO socios.Socio (
+		Nro_Socio,
+		DNI,
+		Fecha_Nacimiento,
+		Apellido,
+		Nombre,
+		Numero_De_Socio_OS,
+		Telefono_De_Emergencias_OS,
+		Telefono_Contacto_Emergencia,
+		Nombre_Obra_Social,
+		Telefono_Contacto,
+		ID_Estado_Socio,
+		ID_Grupo_Familiar,
+		ID_Categoria_Socio
+	)
+	SELECT
+		LEFT(nro, 7),
+		DNI,
+		fecha,
+		UPPER(apellido),
+		UPPER(nombre),
+		nro_OS,
+		telefono_contacto_emergencia_OS,
+		telefono_contacto_emergencia,
+		nombre_OS,
+		telefono_contacto,
+		1,
+		NULL,
+		CASE 
+			WHEN DATEDIFF(YEAR, fecha, GETDATE()) <= 12 THEN 1
+			WHEN DATEDIFF(YEAR, fecha, GETDATE()) <= 17 THEN 2
+			ELSE 3
+		END
+	FROM DatosValidos;
+
+	-- Se pueden almacenar los errores en una tabla específica para esto
+	/*INSERT INTO importaciones.Errores_Importacion_Socios (DNI, Motivo)
+	SELECT DNI, 'Fecha de nacimiento inválida (NULL luego de conversión)' FROM #SociosExcel
+	WHERE fecha IS NULL;*/
+
+    DROP TABLE #SociosExcel;
+END;
