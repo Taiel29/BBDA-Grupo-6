@@ -350,6 +350,7 @@ BEGIN
 			emp.Telefono_De_Contacto_Enc = ENCRYPTBYPASSPHRASE(@password, CAST(emp.Telefono_De_Contacto AS VARCHAR)),
 			emp.Telefono_De_Emergencia_Enc = ENCRYPTBYPASSPHRASE(@password, CAST(emp.Telefono_De_Emergencia AS VARCHAR))
 		FROM club.Empleado emp
+		WHERE emp.Nombre <> 'encryp'
 
 		UPDATE emp
 		SET 

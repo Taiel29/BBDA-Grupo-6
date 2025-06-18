@@ -45,6 +45,8 @@ EXEC importaciones.ImportarSociosDesdeExcel
 GO
 
 SELECT * FROM socios.Socio
+SELECT s.ID, s.Nombre, s.Apellido, s.Fecha_Nacimiento, cs.Nombre FROM socios.Socio s JOIN socios.Categoria_Socio cs on cs.ID = s.ID_Categoria_Socio
+
 
 -- Probar SP "importaciones.Import_Asistencias"
 -- Al final deben quedar actualizadas y sin duplicados:

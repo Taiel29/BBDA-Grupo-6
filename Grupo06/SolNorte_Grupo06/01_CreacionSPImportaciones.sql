@@ -249,7 +249,16 @@ BEGIN
 		tmp.Profesor AS Nombre_Completo,
 		LTRIM(RTRIM(LEFT(tmp.Profesor, LEN(tmp.Profesor) - CHARINDEX(' ', REVERSE(tmp.Profesor))))) AS Profesor_Nombre,
 		LTRIM(RTRIM(RIGHT(tmp.Profesor, CHARINDEX(' ', REVERSE(tmp.Profesor)) - 1))) AS Profesor_Apellido,
-		DATENAME(weekday, tmp.Fecha) AS Dia_De_La_Semana
+		CASE DATENAME(weekday, tmp.Fecha)
+			WHEN 'Monday' THEN 'Lunes'
+			WHEN 'Tuesday' THEN 'Martes'
+			WHEN 'Wednesday' THEN 'Miércoles'
+			WHEN 'Thursday' THEN 'Jueves'
+			WHEN 'Friday' THEN 'Viernes'
+			WHEN 'Saturday' THEN 'Sábado'
+			WHEN 'Sunday' THEN 'Domingo'
+			ELSE 'Desconocido'
+		END AS Dia_De_La_Semana
 	FROM #TempImport_Asiste tmp
 	WHERE CHARINDEX(' ', tmp.Profesor) > 0;
 
@@ -426,9 +435,9 @@ BEGIN
 		1,
 		NULL,
 		CASE 
-			WHEN DATEDIFF(YEAR, fecha, GETDATE()) <= 12 THEN 1
+			WHEN DATEDIFF(YEAR, fecha, GETDATE()) <= 12 THEN 3
 			WHEN DATEDIFF(YEAR, fecha, GETDATE()) <= 17 THEN 2
-			ELSE 3
+			ELSE 1
 		END
 	FROM DatosValidos;
 

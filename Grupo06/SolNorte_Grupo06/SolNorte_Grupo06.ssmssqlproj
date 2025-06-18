@@ -86,8 +86,8 @@
           <FullPath>02_CreacionSPReportes.sql</FullPath>
         </FileNode>
         <FileNode Name="03_Seguridad.sql">
-          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:RAMA-PC\SQLEXPRESS:True</AssociatedConnectionMoniker>
-          <AssociatedConnSrvName>RAMA-PC\SQLEXPRESS</AssociatedConnSrvName>
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:TAIELPC:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>TAIELPC</AssociatedConnSrvName>
           <AssociatedConnUserName />
           <FullPath>03_Seguridad.sql</FullPath>
         </FileNode>
