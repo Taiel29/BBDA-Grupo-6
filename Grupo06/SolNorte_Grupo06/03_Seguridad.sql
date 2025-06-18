@@ -253,8 +253,6 @@ GRANT SELECT ON SCHEMA::actividades TO rol_Vocal;
 
 
 -- AGREGO CAMPOS A ENCRIPTAR PARA NO PISAR LOS DATOS ORIGINALES (empleado)
-Declare @password as varchar(50)
-Set @password = 'EkAHYL]cv92=#Z!1EuDH'
 
 -- ================== IDENTIFICADORES ==================
 IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'club' AND TABLE_NAME = 'Empleado' AND COLUMN_NAME = 'DNI_Enc')
@@ -286,6 +284,8 @@ ON club.Empleado
 AFTER INSERT
 AS
 BEGIN
+	Declare @password as varchar(50)
+	Set @password = 'EkAHYL]cv92=#Z!1EuDH'
 		-- Encriptar y actualizar las columnas encriptadas
 		UPDATE emp
 		SET 
@@ -299,7 +299,6 @@ BEGIN
 		FROM club.Empleado emp
 		INNER JOIN inserted i ON emp.ID = i.ID;
 
-		-- esto es opcional.
 		UPDATE emp
 		SET 
 			emp.Nombre = 'encryp',
@@ -312,132 +311,55 @@ BEGIN
 		FROM club.Empleado emp
 		INNER JOIN inserted i ON emp.ID = i.ID;
 END;
-PRINT 'TRIGGER CREADO CORRECTAMENTE';
-
-GO
-
--- AGREGO CAMPOS A ENCRIPTAR PARA NO PISAR LOS DATOS ORIGINALES (socio)
-
--- ================== IDENTIFICADORES ==================
-IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'socios' AND TABLE_NAME = 'Socio' AND COLUMN_NAME = 'Nro_Socio_Enc')
-    ALTER TABLE socios.Socio ADD Nro_Socio_Enc VARBINARY(MAX);
-IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'socios' AND TABLE_NAME = 'Socio' AND COLUMN_NAME = 'DNI_Enc')
-    ALTER TABLE socios.Socio ADD DNI_Enc VARBINARY(MAX);
-IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'socios' AND TABLE_NAME = 'Socio' AND COLUMN_NAME = 'Numero_De_Socio_OS_Enc')
-    ALTER TABLE socios.Socio ADD Numero_De_Socio_OS_Enc VARBINARY(MAX);
-
--- ================== INFORMACIÓN PERSONAL =============
-IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'socios' AND TABLE_NAME = 'Socio' AND COLUMN_NAME = 'Fecha_Nacimiento_Enc')
-    ALTER TABLE socios.Socio ADD Fecha_Nacimiento_Enc VARBINARY(MAX);
-IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'socios' AND TABLE_NAME = 'Socio' AND COLUMN_NAME = 'Apellido_Enc')
-    ALTER TABLE socios.Socio ADD Apellido_Enc VARBINARY(MAX);
-IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'socios' AND TABLE_NAME = 'Socio' AND COLUMN_NAME = 'Nombre_Enc')
-    ALTER TABLE socios.Socio ADD Nombre_Enc VARBINARY(MAX);
-
--- ================== CONTACTO =========================
-IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'socios' AND TABLE_NAME = 'Socio' AND COLUMN_NAME = 'Telefono_De_Emergencias_OS_Enc')
-    ALTER TABLE socios.Socio ADD Telefono_De_Emergencias_OS_Enc VARBINARY(MAX);
-IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'socios' AND TABLE_NAME = 'Socio' AND COLUMN_NAME = 'Telefono_Contacto_Emergencia_Enc')
-    ALTER TABLE socios.Socio ADD Telefono_Contacto_Emergencia_Enc VARBINARY(MAX);
-IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'socios' AND TABLE_NAME = 'Socio' AND COLUMN_NAME = 'Nombre_Obra_Social_Enc')
-    ALTER TABLE socios.Socio ADD Nombre_Obra_Social_Enc VARBINARY(MAX);
-IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'socios' AND TABLE_NAME = 'Socio' AND COLUMN_NAME = 'Telefono_Contacto_Enc')
-    ALTER TABLE socios.Socio ADD Telefono_Contacto_Enc VARBINARY(MAX);
-GO
-
-
-IF EXISTS (SELECT 1 FROM sys.triggers WHERE name='trg_Socio_Encrypt')
-    DROP TRIGGER socios.trg_Socio_Encrypt;
-GO
-
-CREATE TRIGGER socios.trg_Socio_Encrypt
-ON socios.Socio
-AFTER INSERT
-AS
-BEGIN
-    -- Encriptar y actualizar las columnas encriptadas
-    UPDATE soc
-    SET 
-        soc.Nro_Socio = ENCRYPTBYPASSPHRASE(@password, i.Nro_Socio),
-        soc.DNI = ENCRYPTBYPASSPHRASE(@password, i.DNI),
-        soc.Numero_De_Socio_OS = ENCRYPTBYPASSPHRASE(@password, i.Numero_De_Socio_OS),
-        soc.Fecha_Nacimiento_Enc = ENCRYPTBYPASSPHRASE(@password, CONVERT(VARCHAR, i.Fecha_Nacimiento, 23)),
-        soc.Nombre_Enc = ENCRYPTBYPASSPHRASE(@password, i.Nombre),
-        soc.Apellido_Enc = ENCRYPTBYPASSPHRASE(@password, i.Apellido),
-        soc.Nombre_Obra_Social_Enc = ENCRYPTBYPASSPHRASE(@password, i.Nombre_Obra_Social),
-        soc.Telefono_De_Emergencias_OS_Enc = ENCRYPTBYPASSPHRASE(@password, CAST(i.Telefono_De_Emergencias_OS AS VARCHAR)),
-        soc.Telefono_Contacto_Enc = ENCRYPTBYPASSPHRASE(@password, CAST(i.Telefono_Contacto AS VARCHAR)),
-        soc.Telefono_Contacto_Emergencia_Enc = ENCRYPTBYPASSPHRASE(@password, CAST(i.Telefono_Contacto_Emergencia AS VARCHAR))
-    FROM socios.Socio soc
-    INNER JOIN inserted i ON soc.ID = i.ID;
-
-	-- esto es opcional. 
-	UPDATE soc
-	SET 
-		soc.Nro_Socio_Enc = soc.Nro_Socio, 
-		soc.DNI_Enc = soc.DNI, 
-		soc.Numero_De_Socio_OS_Enc = soc.Numero_De_Socio_OS, 
-		soc.Fecha_Nacimiento = NULL,
-		soc.Nombre = 'encryp',
-		soc.Apellido = 'encryp',
-		soc.Nombre_Obra_Social = NULL,
-		soc.Telefono_De_Emergencias_OS = 'encryp',
-		soc.Telefono_Contacto = NULL,
-		soc.Telefono_Contacto_Emergencia = 'encryp'
-	FROM socios.Socio soc
-	INNER JOIN inserted i ON soc.ID = i.ID;
-END;
-PRINT 'TRIGGER CREADO CORRECTAMENTE';
 GO
 
 --DESENCRIPTAR TABLA EMPLEADO Y MOSTRAR
 
-	CREATE OR ALTER PROCEDURE sp_DesencriptarEmpleado
-		@password NVARCHAR(100)
-	AS
-	BEGIN
-		SET NOCOUNT ON;
+CREATE OR ALTER PROCEDURE club.sp_DesencriptarEmpleado
+	@password NVARCHAR(100)
+AS
+BEGIN
+	SET NOCOUNT ON;
+
+	UPDATE emp
+	SET 
+		Nombre = CONVERT(VARCHAR(50), DECRYPTBYPASSPHRASE(@password, Nombre_Enc)),
+		Apellido = CONVERT(VARCHAR(50), DECRYPTBYPASSPHRASE(@password, Apellido_Enc)),
+		DNI = CONVERT(CHAR(9), DECRYPTBYPASSPHRASE(@password, DNI_Enc)),
+		Fecha_Nacimiento = CONVERT(DATE, DECRYPTBYPASSPHRASE(@password, Fecha_Nacimiento_Enc)),
+		Area = CONVERT(VARCHAR(20), DECRYPTBYPASSPHRASE(@password, Area_Enc)),
+		Telefono_De_Contacto = CONVERT(VARCHAR(20), DECRYPTBYPASSPHRASE(@password, Telefono_De_Contacto_Enc)),
+		Telefono_De_Emergencia = CONVERT(VARCHAR(20), DECRYPTBYPASSPHRASE(@password, Telefono_De_Emergencia_Enc))
+	FROM club.Empleado emp;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE club.sp_EncriptarEmpleado
+	@password NVARCHAR(100)
+AS
+BEGIN
+	SET NOCOUNT ON;
+		-- Encriptar y actualizar las columnas encriptadas
+		UPDATE emp
+		SET 
+			emp.Nombre_Enc = ENCRYPTBYPASSPHRASE(@password, emp.Nombre),
+			emp.Apellido_Enc = ENCRYPTBYPASSPHRASE(@password, emp.Apellido),
+			emp.DNI_Enc = ENCRYPTBYPASSPHRASE(@password, emp.DNI),
+			emp.Fecha_Nacimiento_Enc = ENCRYPTBYPASSPHRASE(@password, CONVERT(VARCHAR, emp.Fecha_Nacimiento, 23)),
+			emp.Area_Enc = ENCRYPTBYPASSPHRASE(@password, emp.Area),
+			emp.Telefono_De_Contacto_Enc = ENCRYPTBYPASSPHRASE(@password, CAST(emp.Telefono_De_Contacto AS VARCHAR)),
+			emp.Telefono_De_Emergencia_Enc = ENCRYPTBYPASSPHRASE(@password, CAST(emp.Telefono_De_Emergencia AS VARCHAR))
+		FROM club.Empleado emp
 
 		UPDATE emp
 		SET 
-			Nombre = CONVERT(VARCHAR(50), DECRYPTBYPASSPHRASE(@password, Nombre_Enc)),
-			Apellido = CONVERT(VARCHAR(50), DECRYPTBYPASSPHRASE(@password, Apellido_Enc)),
-			DNI = CONVERT(CHAR(9), DECRYPTBYPASSPHRASE(@password, DNI_Enc)),
-			Fecha_Nacimiento = CONVERT(DATE, DECRYPTBYPASSPHRASE(@password, Fecha_Nacimiento_Enc)),
-			Area = CONVERT(VARCHAR(20), DECRYPTBYPASSPHRASE(@password, Area_Enc)),
-			Telefono_De_Contacto = CONVERT(VARCHAR(20), DECRYPTBYPASSPHRASE(@password, Telefono_De_Contacto_Enc)),
-			Telefono_De_Emergencia = CONVERT(VARCHAR(20), DECRYPTBYPASSPHRASE(@password, Telefono_De_Emergencia_Enc))
-		FROM club.Empleado emp;
-	END;
-	GO
-
---EXEC sp_DesencriptarEmpleado @password = 'EkAHYL]cv92=#Z!1EuDH';
-
-
-
-
---DESENCRIPTAR TABLA SOCIO Y MOSTRAR
-
-	CREATE OR ALTER PROCEDURE sp_DesencriptarSocio
-		@password NVARCHAR(100)
-	AS
-	BEGIN
-		SET NOCOUNT ON;
-
-		UPDATE soc
-		SET 
-			Nro_Socio = CONVERT(CHAR(7), DECRYPTBYPASSPHRASE(@password, Nro_Socio_Enc)),
-			DNI = CONVERT(CHAR(9), DECRYPTBYPASSPHRASE(@password, DNI_Enc)),
-			Numero_De_Socio_OS = CONVERT(INT, DECRYPTBYPASSPHRASE(@password, Numero_De_Socio_OS_Enc)),
-			Fecha_Nacimiento = CONVERT(DATE, DECRYPTBYPASSPHRASE(@password, Fecha_Nacimiento_Enc)),
-			Nombre = CONVERT(VARCHAR(50), DECRYPTBYPASSPHRASE(@password, Nombre_Enc)),
-			Apellido = CONVERT(VARCHAR(50), DECRYPTBYPASSPHRASE(@password, Apellido_Enc)),
-			Nombre_Obra_Social = CONVERT(VARCHAR(50), DECRYPTBYPASSPHRASE(@password, Nombre_Obra_Social_Enc)),
-			Telefono_De_Emergencias_OS = CONVERT(VARCHAR(20), DECRYPTBYPASSPHRASE(@password, Telefono_De_Emergencias_OS_Enc)),
-			Telefono_Contacto = CONVERT(VARCHAR(20), DECRYPTBYPASSPHRASE(@password, Telefono_Contacto_Enc)),
-			Telefono_Contacto_Emergencia = CONVERT(VARCHAR(20), DECRYPTBYPASSPHRASE(@password, Telefono_Contacto_Emergencia_Enc))
-	  FROM socios.Socio soc;
-	END;
-	GO
-
---EXEC sp_DesencriptarSocio @password = 'EkAHYL]cv92=#Z!1EuDH';
+			emp.Nombre = 'encryp',
+			emp.Apellido = 'encryp',
+			emp.DNI = NULL,
+			emp.Fecha_Nacimiento = NULL,
+			emp.Area = NULL,
+			emp.Telefono_De_Contacto = NULL,
+			emp.Telefono_De_Emergencia = NULL
+		FROM club.Empleado emp
+END;
+GO

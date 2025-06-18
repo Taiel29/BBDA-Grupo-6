@@ -23,21 +23,6 @@ GO
 SELECT * FROM tesoreria.Tarifa_Actividad
 SELECT * FROM actividades.Actividad
 
--- Probar SP "importaciones.Import_Asistencias"
--- Al final deben quedar actualizadas y sin duplicados:
--- Tabla club.Empleado con el nombre completo del profesor
--- Tabla actividades.Clase con el día de la semana que se da, a que actividad pertenece, y cual profe la da
-
--- EN PROCESO: Tabla actividades.Socio_Asiste_Clase con el alumno, la fecha, la clase, y si asistió
-
-EXEC importaciones.Import_Asistencias
-    @rutaArch = 'C:\Users\Public\Documents\Datos socios.xlsx'
-
-SELECT * FROM club.Empleado
-SELECT * FROM actividades.Clase
-
--- SELECT * FROM actividades.Socio_Asiste_Clase
-
 -- Probar SP "importaciones.Import_Tarifas_Cuotas"
 -- Al final deben quedar actualizadas y sin duplicados:
 -- Tabla tesoreria.Tarifa_Categoria con los importes y sus vigencias
@@ -45,9 +30,35 @@ SELECT * FROM actividades.Clase
 
 EXEC importaciones.Import_Tarifas_Cuotas
     @rutaArch = 'C:\Users\Public\Documents\Datos socios.xlsx'
+GO
 
 SELECT * FROM tesoreria.Tarifa_Categoria
 SELECT * FROM socios.Categoria_Socio
+
+-- Probar SP "importaciones.Import_Asistencias"
+-- Al final deben quedar actualizadas y sin duplicados:
+-- Tabla socios.Socio con todos los socios que sean responsables de pago
+
+
+EXEC importaciones.ImportarSociosDesdeExcel
+	@RutaExcel = 'C:\Users\Public\Documents\Datos socios.xlsx'
+GO
+
+SELECT * FROM socios.Socio
+
+-- Probar SP "importaciones.Import_Asistencias"
+-- Al final deben quedar actualizadas y sin duplicados:
+-- Tabla club.Empleado con el nombre completo del profesor
+-- Tabla actividades.Clase con el día de la semana que se da, a que actividad pertenece, y cual profe la da
+-- Tabla actividades.Socio_Asiste_Clase con el alumno, la fecha, la clase, y si asistió
+
+EXEC importaciones.Import_Asistencias
+    @rutaArch = 'C:\Users\Public\Documents\Datos socios.xlsx'
+GO
+
+SELECT * FROM club.Empleado
+SELECT * FROM actividades.Clase
+SELECT * FROM actividades.Socio_Asiste_Clase
 
 -- Probar SP "importaciones.Import_Tarifas_Pileta"
 -- Al final deben quedar actualizadas y sin duplicados:
@@ -56,11 +67,6 @@ SELECT * FROM socios.Categoria_Socio
 
 EXEC importaciones.Import_Tarifas_Pileta
     @rutaArch = 'C:\Users\Public\Documents\Datos socios.xlsx'
+GO
 
 SELECT * FROM tesoreria.Tarifa_Pileta
-
-
-EXEC importaciones.ImportarSociosDesdeExcel
-	@RutaExcel = 'C:\Users\Public\Documents\Datos socios.xlsx'
-
-SELECT * FROM socios.Socio

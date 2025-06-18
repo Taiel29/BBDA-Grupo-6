@@ -199,69 +199,125 @@ CREATE OR ALTER PROCEDURE importaciones.Import_Asistencias
 	@rutaArch NVARCHAR(255)
 AS
 BEGIN
-
-	Create table #TempImport_Asiste (
-		ID INT Identity(1,1) Primary Key,
+	-- Crear tabla temporal para importar los datos del archivo Excel.
+	-- This temporary table will hold the raw data from the Excel file.
+	CREATE TABLE #TempImport_Asiste (
+		ID INT IDENTITY(1,1) PRIMARY KEY,
 		Descripcion VARCHAR(50),
 		Fecha DATE NOT NULL,
-		Asiste CHAR NOT NULL,
+		Asiste CHAR(1) NOT NULL, -- Changed to CHAR(1) for consistency with LEFT(..., 1)
 		ID_Socio CHAR(8) NOT NULL,
 		Profesor VARCHAR(50) NOT NULL
 	);
 	
+	-- Import data from the Excel file into the temporary table.
+	-- OPENROWSET is used to read data from the Excel spreadsheet.
 	EXEC('INSERT INTO #TempImport_Asiste (Descripcion, Fecha, Asiste, ID_Socio, Profesor)' +
-		'SELECT
+		' SELECT
 		LTRIM(RTRIM([Actividad])),
 		[fecha de asistencia],
-		LEFT(LTRIM(RTRIM([Asistencia])), 1) AS Asiste, 
-		[Nro de Socio],
+		LEFT(LTRIM(RTRIM([Asistencia])), 1) AS Asiste, 
+		LTRIM(RTRIM([Nro de Socio])),
 		LTRIM(RTRIM([Profesor]))' +
-		'FROM OPENROWSET(''Microsoft.ACE.OLEDB.16.0'','+
+		' FROM OPENROWSET(''Microsoft.ACE.OLEDB.16.0'','+
 		'''Excel 12.0;Database='+@rutaArch+';HDR=YES'','+
 		'''SELECT * FROM [presentismo_actividades$]'');
 	');
-	
+
+	CREATE TABLE #Datos_Procesados (
+		ID INT PRIMARY KEY,
+		Actividad_Descripcion VARCHAR(50),
+		Fecha DATE NOT NULL,
+		Asiste CHAR(1) NOT NULL,
+		ID_Socio CHAR(8) NOT NULL,
+		Nombre_Completo VARCHAR(50),
+		Profesor_Nombre VARCHAR(50),
+		Profesor_Apellido VARCHAR(50),
+		Dia_De_La_Semana VARCHAR(20)
+	);
+
+	INSERT INTO #Datos_Procesados (
+		ID, Actividad_Descripcion, Fecha, Asiste, ID_Socio, Nombre_Completo, 
+		Profesor_Nombre, Profesor_Apellido, Dia_De_La_Semana
+	)
+	SELECT
+		tmp.ID,
+		tmp.Descripcion AS Actividad_Descripcion,
+		tmp.Fecha,
+		tmp.Asiste,
+		tmp.ID_Socio,
+		tmp.Profesor AS Nombre_Completo,
+		LTRIM(RTRIM(LEFT(tmp.Profesor, LEN(tmp.Profesor) - CHARINDEX(' ', REVERSE(tmp.Profesor))))) AS Profesor_Nombre,
+		LTRIM(RTRIM(RIGHT(tmp.Profesor, CHARINDEX(' ', REVERSE(tmp.Profesor)) - 1))) AS Profesor_Apellido,
+		DATENAME(weekday, tmp.Fecha) AS Dia_De_La_Semana
+	FROM #TempImport_Asiste tmp
+	WHERE CHARINDEX(' ', tmp.Profesor) > 0;
+
+	EXEC club.sp_DesencriptarEmpleado @password = 'EkAHYL]cv92=#Z!1EuDH';
+
 	INSERT INTO club.Empleado(Nombre, Apellido, Area)
 	SELECT DISTINCT
-		LEFT(tmp.Profesor, LEN(tmp.Profesor) - CHARINDEX(' ', REVERSE(tmp.Profesor))) AS Nombre,
-		RIGHT(tmp.Profesor, CHARINDEX(' ', REVERSE(tmp.Profesor)) - 1) AS Apellido,
+		pd.Profesor_Nombre,
+		pd.Profesor_Apellido,
 		'Profesor' AS Area
-	FROM #TempImport_Asiste tmp
+	FROM #Datos_Procesados pd
 	WHERE NOT EXISTS (
 		SELECT 1
 		FROM club.Empleado e
-		WHERE e.Nombre = LEFT(tmp.Profesor, LEN(tmp.Profesor) - CHARINDEX(' ', REVERSE(tmp.Profesor)) + 1)
-		  AND e.Apellido = LTRIM(RIGHT(tmp.Profesor, LEN(tmp.Profesor) - CHARINDEX(' ', tmp.Profesor)))
+		WHERE LTRIM(RTRIM(e.Nombre)) = pd.Profesor_Nombre
+		  AND LTRIM(RTRIM(e.Apellido)) = pd.Profesor_Apellido
 	);
+	EXEC club.sp_DesencriptarEmpleado @password = 'EkAHYL]cv92=#Z!1EuDH';
 
 	INSERT INTO actividades.Clase(Día_De_La_Semana, ID_Profesor, ID_Actividad)
 	SELECT DISTINCT
-		DATENAME(weekday, tmp.Fecha) AS Día_De_La_Semana,
-		ce.ID,
-		aa.ID
-	FROM #TempImport_Asiste tmp
-	JOIN club.Empleado ce ON LTRIM(RTRIM(tmp.Profesor)) = LTRIM(RTRIM(ce.Nombre)) + ' ' + LTRIM(RTRIM(ce.Apellido))
-	JOIN actividades.Actividad aa ON aa.Descripcion = tmp.Descripcion
+		pd.Dia_De_La_Semana,
+		ce.ID AS ID_Profesor,
+		aa.ID AS ID_Actividad
+	FROM #Datos_Procesados pd
+	JOIN club.Empleado ce 
+		ON LTRIM(RTRIM(ce.Nombre)) = pd.Profesor_Nombre 
+		AND LTRIM(RTRIM(ce.Apellido)) = pd.Profesor_Apellido
+	JOIN actividades.Actividad aa ON aa.Descripcion = pd.Actividad_Descripcion
 	WHERE NOT EXISTS (
 		SELECT 1
 		FROM actividades.Clase c
-		WHERE c.Día_De_La_Semana = DATENAME(weekday, tmp.Fecha)
-		  AND c.ID_Profesor = ce.ID
-		  AND c.ID_Actividad = aa.ID
+		WHERE c.Día_De_La_Semana = pd.Dia_De_La_Semana
+		  AND c.ID_Profesor = ce.ID
+		  AND c.ID_Actividad = aa.ID
 	);
 
-	-- Falta importar socios
-	/*
 	INSERT INTO actividades.Socio_Asiste_Clase (Fecha, Asiste, ID_Socio, ID_Clase)
-	SELECT Fecha,Asiste, ID_Socio, actividades.Clase.ID
-	FROM #TempImport_Asiste tmp
-	JOIN actividades.Clase ON datename(weekday, tmp.Fecha) = actividades.Clase.Día_De_La_Semana
-	JOIN club.Empleado ce ON LTRIM(RTRIM(tmp.Profesor)) = LTRIM(RTRIM(ce.Nombre)) + ' ' + LTRIM(RTRIM(ce.Apellido))
-	*/
-
+	SELECT
+		pd.Fecha,
+		pd.Asiste,
+		ss.ID AS ID_Socio,
+		ac.ID AS ID_Clase
+	FROM #Datos_Procesados pd
+	JOIN actividades.Actividad aa ON aa.Descripcion = pd.Actividad_Descripcion
+	JOIN club.Empleado ce 
+		ON LTRIM(RTRIM(ce.Nombre)) = pd.Profesor_Nombre 
+		AND LTRIM(RTRIM(ce.Apellido)) = pd.Profesor_Apellido
+	JOIN actividades.Clase ac
+		ON ac.Día_De_La_Semana = pd.Dia_De_La_Semana
+		AND ac.ID_Profesor = ce.ID
+		AND ac.ID_Actividad = aa.ID
+	JOIN socios.Socio ss ON pd.ID_Socio = ss.Nro_Socio
+	WHERE NOT EXISTS (
+		SELECT 1
+		FROM actividades.Socio_Asiste_Clase sac
+		WHERE sac.Fecha = pd.Fecha
+		  AND sac.ID_Socio = ss.ID
+		  AND sac.ID_Clase = ac.ID
+	);
+	
 	DROP TABLE #TempImport_Asiste;
+	DROP TABLE #Datos_Procesados;
+	EXEC club.sp_EncriptarEmpleado @password = 'EkAHYL]cv92=#Z!1EuDH';
+
 END
 GO
+
 
 CREATE OR ALTER PROCEDURE importaciones.ImportarSociosDesdeExcel
     @RutaExcel NVARCHAR(260)
