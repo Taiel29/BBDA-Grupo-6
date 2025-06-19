@@ -100,9 +100,9 @@ CREATE TABLE socios.Socio(
 	Fecha_Nacimiento DATE,
 	Apellido VARCHAR(50) NOT NULL,
 	Nombre VARCHAR(50) NOT NULL,
-	Numero_De_Socio_OS VARCHAR(50) NOT NULL UNIQUE,
-	Telefono_De_Emergencias_OS VARCHAR(50) NOT NULL,
-	Telefono_Contacto_Emergencia VARCHAR(50) NOT NULL,
+	Numero_De_Socio_OS VARCHAR(50),
+	Telefono_De_Emergencias_OS VARCHAR(50),
+	Telefono_Contacto_Emergencia VARCHAR(50),
 	Nombre_Obra_Social VARCHAR(50),
 	Telefono_Contacto VARCHAR(50),
 	ID_Estado_Socio INT,
@@ -528,10 +528,20 @@ CREATE TABLE tesoreria.Cuota(
 	FOREIGN KEY (ID_Socio) REFERENCES socios.Socio (ID) ON DELETE CASCADE,
 	FOREIGN KEY (ID_Factura) REFERENCES tesoreria.Factura(ID) ON DELETE CASCADE
 );
-
+GO
 
 --VER COMO CARGAR ESTOS DATOS
 INSERT INTO socios.Estado_Socio VALUES
 ('ACTIVO'),
 ('MOROSO'),
 ('INACTIVO');
+
+GO
+
+CREATE TABLE importaciones.Errores_Importacion_Socios(
+	ID INT IDENTITY(1,1) PRIMARY KEY,
+	DNI CHAR(9),
+	Numero_De_Socio_OS VARCHAR(50),
+	Motivo VARCHAR(200),
+	Fecha_Registro DATETIME DEFAULT GETDATE()
+);

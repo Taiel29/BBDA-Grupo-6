@@ -379,8 +379,7 @@ BEGIN
 
     EXEC sp_executesql @sql;
 
-    SELECT * FROM #SociosExcel;
-
+	--DATOS VALIDOS
 	WITH DatosValidos AS (
 		SELECT *
 		FROM #SociosExcel s
@@ -398,13 +397,7 @@ BEGIN
 			AND NOT EXISTS (
 				SELECT 1 FROM #SociosExcel s2 WHERE s2.nro_OS = s.nro_OS AND s2.ID < s.ID
 		)
-	),
-	DatosInvalidos AS (
-		SELECT DNI
-		FROM #SociosExcel
-		WHERE fecha IS NULL
 	)
-
 	-- Insertar los válidos
 	INSERT INTO socios.Socio (
 		Nro_Socio,
@@ -441,10 +434,167 @@ BEGIN
 		END
 	FROM DatosValidos;
 
+	--DATOS INVALIDOS
+	CREATE TABLE #Errores (
+		DNI CHAR(9),
+		Numero_De_Socio_OS VARCHAR(50),
+		Motivo VARCHAR(255)
+	);
+
+	INSERT INTO #Errores (DNI, Numero_De_Socio_OS, Motivo)
+	SELECT DISTINCT DNI, nro_OS, 'Fecha de nacimiento inválida (NULL luego de conversión)'
+	FROM #SociosExcel
+	WHERE fecha IS NULL;
+
+	INSERT INTO #Errores (DNI, Numero_De_Socio_OS, Motivo)
+	SELECT DISTINCT s.DNI, s.nro_OS, 'DNI duplicado en el Excel. Se inserta solo primer encuentro'
+	FROM #SociosExcel s
+	JOIN (
+		SELECT DNI
+		FROM #SociosExcel
+		GROUP BY DNI
+		HAVING COUNT(*) > 1
+	) d ON s.DNI = d.DNI;
+
+	INSERT INTO #Errores (DNI, Numero_De_Socio_OS, Motivo)
+	SELECT DISTINCT s.DNI, s.nro_OS, 'Número de socio OS duplicado en el Excel. Se inserta solo primer encuentro'
+	FROM #SociosExcel s
+	JOIN (
+		SELECT nro_OS
+		FROM #SociosExcel
+		GROUP BY nro_OS
+		HAVING COUNT(*) > 1
+	) d ON s.nro_OS = d.nro_OS;
+
+	--Ingresar los inválidos
+	INSERT INTO importaciones.Errores_Importacion_Socios (DNI, Numero_De_Socio_OS, Motivo)
+	SELECT DISTINCT DNI, Numero_De_Socio_OS, Motivo
+	FROM #Errores;
 	-- Se pueden almacenar los errores en una tabla específica para esto
 	/*INSERT INTO importaciones.Errores_Importacion_Socios (DNI, Motivo)
 	SELECT DNI, 'Fecha de nacimiento inválida (NULL luego de conversión)' FROM #SociosExcel
 	WHERE fecha IS NULL;*/
+	
+	SELECT * FROM #Errores;
 
+	DROP TABLE #Errores;
     DROP TABLE #SociosExcel;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE importaciones.ImportarGrupoFamiliar
+    @RutaExcel NVARCHAR(260)
+AS
+BEGIN
+	SET NOCOUNT ON;
+
+    IF OBJECT_ID('#GrupoFamiliarExcel') IS NOT NULL
+        DROP TABLE #GrupoFamiliarExcel;
+
+    CREATE TABLE #GrupoFamiliarExcel (
+        ID INT IDENTITY(1,1) PRIMARY KEY,
+        nro CHAR(8),
+		nro_RP CHAR(8),
+        nombre VARCHAR(50),
+        apellido VARCHAR(50),
+        DNI CHAR(9),
+        email VARCHAR(150),
+        fecha DATE,
+        telefono_contacto VARCHAR(50),
+        telefono_contacto_emergencia VARCHAR(50),
+        nombre_OS VARCHAR(50),
+        nro_OS VARCHAR(50),
+        telefono_contacto_emergencia_OS VARCHAR(50)
+    );
+
+	DECLARE @sql NVARCHAR(MAX) = '
+    INSERT INTO #GrupoFamiliarExcel (
+        nro, nro_RP, nombre, apellido, DNI, email, fecha,
+        telefono_contacto, telefono_contacto_emergencia,
+        nombre_OS, nro_OS, telefono_contacto_emergencia_OS
+    )
+    SELECT
+        Ltrim(rtrim(F1)),
+		Ltrim(rtrim(F2)),
+        Ltrim(rtrim(F3)),
+        Ltrim(rtrim(F4)),
+		LTRIM(RTRIM(LEFT(CAST(CONVERT(BIGINT, F5) AS VARCHAR), 8))),
+        Ltrim(rtrim(F6)),
+        Ltrim(rtrim(F7)),
+		LTRIM(RTRIM(CAST(CONVERT(BIGINT, F8) AS VARCHAR))),
+		LTRIM(RTRIM(CAST(CONVERT(BIGINT, F9) AS VARCHAR))),
+        Ltrim(rtrim(F10)),
+        Ltrim(rtrim(F11)),
+        Ltrim(rtrim(F12))
+    FROM OPENROWSET(
+        ''Microsoft.ACE.OLEDB.16.0'',
+        ''Excel 12.0;Database=' + @RutaExcel + ';HDR=NO'',
+        ''SELECT * FROM [Grupo familiar$A2:L]''
+    );
+    ';
+
+    EXEC sp_executesql @sql;
+
+	/*INSERT INTO socios.Grupo_Familiar (ID_Socio_Responsable)
+	SELECT DISTINCT ID
+	FROM #GrupoFamiliarExcel
+	WHERE nro_RP IS NOT NULL
+	  AND NOT EXISTS (
+		SELECT 1 FROM socios.Grupo_Familiar gf, socios.Socio s WHERE gf.ID_Socio_Responsable = s.ID 
+		AND #GrupoFamiliarExcel.nro_RP = s.Nro_Socio
+	);*/
+
+	INSERT INTO socios.Grupo_Familiar (ID_Socio_Responsable)
+	SELECT DISTINCT s.ID FROM socios.Socio s, #GrupoFamiliarExcel gf 
+	WHERE s.Nro_Socio = gf.nro_RP;
+
+	INSERT INTO socios.Socio (
+		Nro_Socio,
+		DNI,
+		Fecha_Nacimiento,
+		Apellido,
+		Nombre,
+		Numero_De_Socio_OS,
+		Telefono_De_Emergencias_OS,
+		Telefono_Contacto_Emergencia,
+		Nombre_Obra_Social,
+		Telefono_Contacto,
+		ID_Estado_Socio,
+		ID_Grupo_Familiar,
+		ID_Categoria_Socio
+	)
+	SELECT
+		LEFT(nro, 7),
+		DNI,
+		fecha,
+		UPPER(apellido),
+		UPPER(nombre),
+		nro_OS,
+		telefono_contacto_emergencia_OS,
+		telefono_contacto_emergencia,
+		nombre_OS,
+		telefono_contacto,
+		1,
+		NULL,
+		CASE 
+			WHEN DATEDIFF(YEAR, fecha, GETDATE()) <= 12 THEN 1
+			WHEN DATEDIFF(YEAR, fecha, GETDATE()) <= 17 THEN 2
+			ELSE 3
+		END
+	FROM #GrupoFamiliarExcel;
+
+	--UPDATE socios.Socio SET ID_Grupo_Familiar = (
+	--	SELECT gf.ID FROM socios.Grupo_Familiar gf, socios.Socio s, #GrupoFamiliarExcel
+	--	WHERE #GrupoFamiliarExcel.nro = s.Nro_Socio OR #GrupoFamiliarExcel.nro_RP = s.Nro_Socio
+	--);
+
+	--SELECT gf.ID FROM socios.Grupo_Familiar gf, socios.Socio s, #GrupoFamiliarExcel
+	--	WHERE #GrupoFamiliarExcel.nro_RP = s.Nro_Socio AND gf.ID_Socio_Responsable = s.ID
+
+	UPDATE s
+	SET s.ID_Grupo_Familiar = gf.ID
+	FROM socios.Socio s
+	JOIN #GrupoFamiliarExcel g ON s.Nro_Socio = g.nro
+	JOIN socios.Socio responsable ON responsable.Nro_Socio = g.nro_RP
+	JOIN socios.Grupo_Familiar gf ON gf.ID_Socio_Responsable = responsable.ID;
 END;
