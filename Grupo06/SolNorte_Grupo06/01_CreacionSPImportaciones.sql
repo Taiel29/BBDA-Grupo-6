@@ -470,12 +470,6 @@ BEGIN
 	INSERT INTO importaciones.Errores_Importacion_Socios (DNI, Numero_De_Socio_OS, Motivo)
 	SELECT DISTINCT DNI, Numero_De_Socio_OS, Motivo
 	FROM #Errores;
-	-- Se pueden almacenar los errores en una tabla específica para esto
-	/*INSERT INTO importaciones.Errores_Importacion_Socios (DNI, Motivo)
-	SELECT DNI, 'Fecha de nacimiento inválida (NULL luego de conversión)' FROM #SociosExcel
-	WHERE fecha IS NULL;*/
-	
-	SELECT * FROM #Errores;
 
 	DROP TABLE #Errores;
     DROP TABLE #SociosExcel;
@@ -535,15 +529,6 @@ BEGIN
 
     EXEC sp_executesql @sql;
 
-	/*INSERT INTO socios.Grupo_Familiar (ID_Socio_Responsable)
-	SELECT DISTINCT ID
-	FROM #GrupoFamiliarExcel
-	WHERE nro_RP IS NOT NULL
-	  AND NOT EXISTS (
-		SELECT 1 FROM socios.Grupo_Familiar gf, socios.Socio s WHERE gf.ID_Socio_Responsable = s.ID 
-		AND #GrupoFamiliarExcel.nro_RP = s.Nro_Socio
-	);*/
-
 	INSERT INTO socios.Grupo_Familiar (ID_Socio_Responsable)
 	SELECT DISTINCT s.ID FROM socios.Socio s, #GrupoFamiliarExcel gf 
 	WHERE s.Nro_Socio = gf.nro_RP;
@@ -583,18 +568,210 @@ BEGIN
 		END
 	FROM #GrupoFamiliarExcel;
 
-	--UPDATE socios.Socio SET ID_Grupo_Familiar = (
-	--	SELECT gf.ID FROM socios.Grupo_Familiar gf, socios.Socio s, #GrupoFamiliarExcel
-	--	WHERE #GrupoFamiliarExcel.nro = s.Nro_Socio OR #GrupoFamiliarExcel.nro_RP = s.Nro_Socio
-	--);
-
-	--SELECT gf.ID FROM socios.Grupo_Familiar gf, socios.Socio s, #GrupoFamiliarExcel
-	--	WHERE #GrupoFamiliarExcel.nro_RP = s.Nro_Socio AND gf.ID_Socio_Responsable = s.ID
-
 	UPDATE s
 	SET s.ID_Grupo_Familiar = gf.ID
 	FROM socios.Socio s
 	JOIN #GrupoFamiliarExcel g ON s.Nro_Socio = g.nro
 	JOIN socios.Socio responsable ON responsable.Nro_Socio = g.nro_RP
 	JOIN socios.Grupo_Familiar gf ON gf.ID_Socio_Responsable = responsable.ID;
+
+	DROP TABLE #GrupoFamiliarExcel;
 END;
+GO
+
+/*CREATE OR ALTER PROCEDURE importaciones.ImportarPagoCuotasDesdeExcel
+    @RutaExcel NVARCHAR(260)
+AS
+BEGIN
+	SET NOCOUNT ON;
+
+    IF OBJECT_ID('#PagoCuotasExcel') IS NOT NULL
+        DROP TABLE #PagoCuotasExcel;
+
+    CREATE TABLE #PagoCuotasExcel (
+        ID INT IDENTITY(1,1) PRIMARY KEY,
+        ID_Pago VARCHAR(50),
+		Fecha_Pago DATE,
+		Nro_Socio_RP VARCHAR(50),
+		Valor DECIMAL(10,2),
+		Medio_Pago VARCHAR(50)
+    );
+
+	DECLARE @sql NVARCHAR(MAX) = '
+    INSERT INTO #PagoCuotasExcel (
+        ID_Pago, Fecha_Pago, Nro_Socio_RP, Valor, Medio_Pago
+    )
+    SELECT
+        LTRIM(RTRIM(CAST(CONVERT(BIGINT, F1) AS VARCHAR))),
+		Ltrim(rtrim(F2)),
+        Ltrim(rtrim(F3)),
+        Ltrim(rtrim(F4)),
+		LTRIM(RTRIM(F5))
+    FROM OPENROWSET(
+        ''Microsoft.ACE.OLEDB.16.0'',
+        ''Excel 12.0;Database=' + @RutaExcel + ';HDR=NO'',
+        ''SELECT * FROM [pago cuotas$A2:E]''
+    );
+    ';
+
+    EXEC sp_executesql @sql;
+
+	--SELECT*FROM #PagoCuotasExcel;
+
+	INSERT INTO tesoreria.Cuota(Fecha_Inicio, Fecha_Final, Mes, ID_Socio)
+	SELECT DATEFROMPARTS(YEAR(pc.Fecha_Pago), MONTH(pc.Fecha_Pago), 1), 
+	EOMONTH(pc.Fecha_Pago), MONTH(pc.Fecha_Pago), s.ID
+	FROM #PagoCuotasExcel pc, socios.Socio s
+	WHERE pc.Nro_Socio_RP = s.Nro_Socio
+END;*/
+
+CREATE OR ALTER PROCEDURE importaciones.ImportarPagoCuotasDesdeExcel
+    @RutaExcel NVARCHAR(260)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- 1. Tabla temporal para datos del Excel
+    IF OBJECT_ID('tempdb..#PagosExcel') IS NOT NULL
+        DROP TABLE #PagosExcel;
+
+    CREATE TABLE #PagosExcel (
+        ID_PagoExcel VARCHAR(20),
+        Fecha_Pago DATE,
+        Nro_Socio CHAR(7),
+        Importe DECIMAL(10,2),
+        Medio_Pago VARCHAR(50)
+    );
+
+    -- 2. Carga desde Excel
+    DECLARE @sql NVARCHAR(MAX) = '
+    INSERT INTO #PagosExcel (ID_PagoExcel, Fecha_Pago, Nro_Socio, Importe, Medio_Pago)
+    SELECT
+        LTRIM(RTRIM(CAST(CONVERT(BIGINT, F1) AS VARCHAR))),
+        TRY_CAST(F2 AS DATE),
+        LTRIM(RTRIM(F3)),
+        TRY_CAST(F4 AS DECIMAL(10,2)),
+        LTRIM(RTRIM(F5))
+    FROM OPENROWSET(
+        ''Microsoft.ACE.OLEDB.16.0'',
+        ''Excel 12.0;HDR=NO;Database=' + @RutaExcel + ''',
+        ''SELECT * FROM [pago cuotas$A2:E]''
+    );';
+
+    EXEC sp_executesql @sql;
+
+    -- 3. Agregar ID interno para enlazar datos
+    IF OBJECT_ID('tempdb..#DatosPago') IS NOT NULL
+        DROP TABLE #DatosPago;
+
+    SELECT 
+        ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS ID_Interno,
+		ID_PagoExcel,
+        Fecha_Pago,
+        CAST(GETDATE() AS TIME) AS Hora_Pago,
+        Nro_Socio,
+        Importe
+    INTO #DatosPago
+    FROM #PagosExcel;
+
+    -- 4. Tabla para capturar pagos insertados
+    IF OBJECT_ID('tempdb..#PagosInsertados') IS NOT NULL
+        DROP TABLE #PagosInsertados;
+
+    CREATE TABLE #PagosInsertados (
+        ID_Pago INT,
+        ID_Interno INT,
+		ID_Pago_OG BIGINT,
+        Nro_Socio CHAR(7),
+        Fecha_Pago DATE,
+        Importe DECIMAL(10,2)
+    );
+
+    -- 5. Insertar pagos
+   MERGE INTO tesoreria.Pago AS t
+	USING (
+		SELECT 
+			ID_Interno,
+			ID_PagoExcel,
+			Fecha_Pago,
+			Hora_Pago,
+			src.Nro_Socio,
+			Importe
+		FROM #DatosPago src
+		INNER JOIN socios.Socio s ON src.Nro_Socio = s.Nro_Socio
+	) AS src
+	ON 1 = 0
+	WHEN NOT MATCHED THEN
+		INSERT (ID_Pago, Fecha_Pago, Hora_Pago)
+		VALUES (src.ID_PagoExcel, src.Fecha_Pago, src.Hora_Pago)
+	OUTPUT 
+		INSERTED.ID AS ID_Pago,
+		src.ID_Interno,
+		src.ID_PagoExcel,
+		src.Nro_Socio,
+		src.Fecha_Pago,
+		src.Importe
+	INTO #PagosInsertados (ID_Pago, ID_Interno, ID_Pago_OG, Nro_Socio, Fecha_Pago, Importe);
+
+    -- 6. Tabla para facturas insertadas
+    IF OBJECT_ID('tempdb..#FacturasInsertadas') IS NOT NULL
+        DROP TABLE #FacturasInsertadas;
+
+    CREATE TABLE #FacturasInsertadas (
+        ID_Factura INT,
+        ID_Pago INT,
+        Nro_Socio CHAR(7)
+    );
+
+    -- 7. Insertar facturas
+    MERGE INTO tesoreria.Factura AS target
+	USING (
+		SELECT
+			dp.Fecha_Pago,
+			dp.Importe,
+			pi.ID_Pago,
+			dp.Nro_Socio
+		FROM #DatosPago dp
+		JOIN #PagosInsertados pi ON pi.ID_Pago_OG = dp.ID_PagoExcel
+	) AS src
+	ON 1 = 0
+	WHEN NOT MATCHED THEN
+		INSERT (
+			PDV, Numero, Fecha_Emision, Hora_Emision, Importe,
+			Fecha_Primer_Vencimiento, Fecha_Segundo_Vencimiento,
+			ID_Recargo, ID_Estado, ID_Pago
+		)
+		VALUES (
+			1, 1, src.Fecha_Pago, CAST(GETDATE() AS TIME), src.Importe,
+			DATEADD(DAY, 5, src.Fecha_Pago), DATEADD(DAY, 10, src.Fecha_Pago),
+			NULL, 1, src.ID_Pago
+		)
+	OUTPUT
+		INSERTED.ID, INSERTED.ID_Pago, src.Nro_Socio
+	INTO #FacturasInsertadas (ID_Factura, ID_Pago, Nro_Socio);
+
+    -- 8. Crear cuotas asociadas a las facturas
+	SELECT * FROM #FacturasInsertadas;
+
+    INSERT INTO tesoreria.Cuota (
+        Fecha_Inicio, Fecha_Final, Mes, ID_Socio, ID_Factura
+    )
+    SELECT
+        DATEFROMPARTS(YEAR(f.Fecha_Emision), MONTH(f.Fecha_Emision), 1),
+        EOMONTH(f.Fecha_Emision),
+        MONTH(f.Fecha_Emision),
+        s.ID,
+        f.ID
+    FROM #FacturasInsertadas fi, tesoreria.Factura f, socios.Socio s
+	WHERE s.Nro_Socio = fi.Nro_Socio AND fi.ID_Factura = f.ID
+
+    -- Limpieza
+    DROP TABLE #PagosExcel;
+    DROP TABLE #DatosPago;
+    DROP TABLE #PagosInsertados;
+    DROP TABLE #FacturasInsertadas;
+
+    PRINT 'Importación de pagos, facturas y asignación de cuotas completada.';
+END;
+
+GO

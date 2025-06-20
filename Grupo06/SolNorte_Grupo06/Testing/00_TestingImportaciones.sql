@@ -72,3 +72,11 @@ EXEC importaciones.Import_Tarifas_Pileta
 GO
 
 SELECT * FROM tesoreria.Tarifa_Pileta
+
+EXEC importaciones.ImportarPagoCuotasDesdeExcel
+	@RutaExcel = 'C:\Users\messi\Desktop\UNLAM\Tercer año\BASE DE DATOS APLICADAS\TP\SQL\TPI-2025-1C\Datos socios.xlsx'
+GO
+
+SELECT * FROM tesoreria.Cuota
+SELECT * FROM tesoreria.Pago
+SELECT * FROM tesoreria.Factura

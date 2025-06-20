@@ -422,6 +422,7 @@ GO
 
 CREATE TABLE tesoreria.Pago(
 	ID INT IDENTITY(1,1) PRIMARY KEY,
+	ID_Pago BIGINT,
 	Fecha_Pago DATE,
 	Hora_Pago TIME
 );
@@ -535,7 +536,11 @@ INSERT INTO socios.Estado_Socio VALUES
 ('ACTIVO'),
 ('MOROSO'),
 ('INACTIVO');
+GO
 
+INSERT INTO tesoreria.Estado_Factura VALUES
+('PAGADA'),
+('GENERADA');
 GO
 
 CREATE TABLE importaciones.Errores_Importacion_Socios(
