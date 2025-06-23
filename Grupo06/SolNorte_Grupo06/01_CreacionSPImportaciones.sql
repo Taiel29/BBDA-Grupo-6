@@ -35,7 +35,7 @@ EXEC master.dbo.sp_MSset_oledb_prop
 --Importar tarifas de actividades y crear las actividades si no están
 
 CREATE OR ALTER PROCEDURE importaciones.Import_Actividades
-	@rutaArch NVARCHAR(255)
+	@rutaArch VARCHAR(255)
 AS
 BEGIN
 	
@@ -91,7 +91,7 @@ GO
 
 --Importar tarifas de pileta
 CREATE OR ALTER PROCEDURE importaciones.Import_Tarifas_Pileta
-	@rutaArch NVARCHAR(255)
+	@rutaArch VARCHAR(255)
 AS
 BEGIN
 	CREATE TABLE #TempImport_Tarifa_Pileta(
@@ -143,7 +143,7 @@ GO
 --Importar tarifas de cuotas y crea las categorias de socios
 
 CREATE OR ALTER PROCEDURE importaciones.Import_Tarifas_Cuotas
-	@rutaArch NVARCHAR(255)
+	@rutaArch VARCHAR(255)
 AS
 BEGIN
 	CREATE TABLE #TempImport_Tarifa_Cuota(
@@ -196,7 +196,7 @@ GO
 -- Importar asistencias a clases
 
 CREATE OR ALTER PROCEDURE importaciones.Import_Asistencias
-	@rutaArch NVARCHAR(255)
+	@rutaArch VARCHAR(255)
 AS
 BEGIN
 	-- Crear tabla temporal para importar los datos del archivo Excel.
@@ -328,8 +328,8 @@ END
 GO
 
 
-CREATE OR ALTER PROCEDURE importaciones.ImportarSociosDesdeExcel
-    @RutaExcel NVARCHAR(260)
+CREATE OR ALTER PROCEDURE importaciones.Importar_Socios_Desde_Excel
+    @RutaExcel VARCHAR(260)
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -476,8 +476,8 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE importaciones.ImportarGrupoFamiliar
-    @RutaExcel NVARCHAR(260)
+CREATE OR ALTER PROCEDURE importaciones.Importar_Grupo_Familiar
+    @RutaExcel VARCHAR(260)
 AS
 BEGIN
 	SET NOCOUNT ON;
@@ -626,7 +626,7 @@ BEGIN
 END;*/
 
 CREATE OR ALTER PROCEDURE importaciones.ImportarPagoCuotasDesdeExcel
-    @RutaExcel NVARCHAR(260)
+    @RutaExcel VARCHAR(260)
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -751,7 +751,7 @@ BEGIN
 	INTO #FacturasInsertadas (ID_Factura, ID_Pago, Nro_Socio);
 
     -- 8. Crear cuotas asociadas a las facturas
-	SELECT * FROM #FacturasInsertadas;
+	--SELECT * FROM #FacturasInsertadas;
 
     INSERT INTO tesoreria.Cuota (
         Fecha_Inicio, Fecha_Final, Mes, ID_Socio, ID_Factura
@@ -773,5 +773,59 @@ BEGIN
 
     PRINT 'Importación de pagos, facturas y asignación de cuotas completada.';
 END;
+GO
 
+CREATE or ALTER PROCEDURE importaciones.Importar_Lluvia
+    @RutaArch1 VARCHAR(260), @RutaArch2 VARCHAR(260)
+AS
+BEGIN
+
+	IF OBJECT_ID('tempdb..##TempImport_lluvia') IS NULL
+	BEGIN
+		CREATE TABLE ##TempImport_lluvia (
+		Tiempo CHAR(16) NOT NULL,
+		Temperatura Numeric (3,1),
+		Lluvia Numeric (4,2),
+		Humedad Numeric (5,2),
+		Viento Numeric (4,1)
+		);
+	END
+
+	EXEC('
+	BULK INSERT ##TempImport_lluvia
+	FROM ''' + @RutaArch1 + '''
+	WITH (
+		DATAFILETYPE = ''char'',
+		FIRSTROW = 5,
+		FIELDTERMINATOR = '','',
+		ROWTERMINATOR = ''0x0a'',
+		CODEPAGE = ''65001'',
+		TABLOCK
+	);');
+
+	EXEC('
+	BULK INSERT ##TempImport_lluvia
+	FROM ''' + @RutaArch2 + '''
+	WITH (
+		DATAFILETYPE = ''char'',
+		FIRSTROW = 5,
+		FIELDTERMINATOR = '','',
+		ROWTERMINATOR = ''0x0a'',
+		CODEPAGE = ''65001'',
+		TABLOCK
+	);');
+
+
+	WITH Duplicados AS (
+		SELECT *,
+			   ROW_NUMBER() OVER (
+				   PARTITION BY Tiempo, Lluvia
+				   ORDER BY Tiempo, Lluvia
+			   ) AS rn
+		FROM ##TempImport_lluvia
+	)
+	DELETE FROM Duplicados WHERE rn > 1 OR Duplicados.Lluvia = 0;
+
+
+END
 GO

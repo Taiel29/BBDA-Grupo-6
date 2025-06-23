@@ -35,18 +35,30 @@ GO
 SELECT * FROM tesoreria.Tarifa_Categoria
 SELECT * FROM socios.Categoria_Socio
 
--- Probar SP "importaciones.Import_Asistencias"
+-- Probar SP "importaciones.Importar_Socios_Desde_Excel"
 -- Al final deben quedar actualizadas y sin duplicados:
 -- Tabla socios.Socio con todos los socios que sean responsables de pago
+-- Tabla importaciones.Errores_Importacion_Socios con aquellos socios que no se puedan cargar y la razón
 
-
-EXEC importaciones.ImportarSociosDesdeExcel
+EXEC importaciones.Importar_Socios_Desde_Excel
 	@RutaExcel = 'C:\Users\Public\Documents\Datos socios.xlsx'
 GO
 
 SELECT * FROM socios.Socio
 SELECT s.ID, s.Nombre, s.Apellido, s.Fecha_Nacimiento, cs.Nombre FROM socios.Socio s JOIN socios.Categoria_Socio cs on cs.ID = s.ID_Categoria_Socio
+SELECT * FROM importaciones.Errores_Importacion_Socios
 
+-- Probar SP "importaciones.Importar_Grupo_Familiar"
+-- Al final deben quedar actualizadas y sin duplicados:
+-- Tabla socios.Socio con todos los socios que pertenezcan a un grupo familiar
+-- Tabla socios.Grupo_Familiar con los responsables de cada grupo
+
+EXEC importaciones.Importar_Grupo_Familiar
+	@RutaExcel = 'C:\Users\Public\Documents\Datos socios.xlsx'
+GO
+
+SELECT * FROM socios.Socio ORDER BY Nro_Socio
+SELECT * FROM socios.Grupo_Familiar
 
 -- Probar SP "importaciones.Import_Asistencias"
 -- Al final deben quedar actualizadas y sin duplicados:
@@ -74,9 +86,20 @@ GO
 SELECT * FROM tesoreria.Tarifa_Pileta
 
 EXEC importaciones.ImportarPagoCuotasDesdeExcel
-	@RutaExcel = 'C:\Users\messi\Desktop\UNLAM\Tercer año\BASE DE DATOS APLICADAS\TP\SQL\TPI-2025-1C\Datos socios.xlsx'
+	@RutaExcel = 'C:\Users\Public\Documents\Datos socios.xlsx'
 GO
 
 SELECT * FROM tesoreria.Cuota
 SELECT * FROM tesoreria.Pago
 SELECT * FROM tesoreria.Factura
+
+-- Probar SP "importaciones.Importar_Lluvia"
+-- Al final deben quedar actualizadas y sin duplicados:
+-- Tabla #TempImport_lluvia con los datos de los días que llovieron en el 2024 y 2025
+
+EXEC importaciones.Importar_Lluvia
+	@RutaArch1 = 'C:\Users\Public\Documents\open-meteo-buenosaires_2024.csv',
+	@RutaArch2 = 'C:\Users\Public\Documents\open-meteo-buenosaires_2025.csv'
+GO
+
+SELECT * FROM ##TempImport_lluvia
