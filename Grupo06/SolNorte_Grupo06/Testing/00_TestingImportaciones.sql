@@ -69,7 +69,8 @@ JOIN socios.Grupo_Familiar gf on ss.ID = gf.ID_Socio_Responsable
 -- Tabla actividades.Socio_Asiste_Clase con el alumno, la fecha, la clase, y si asistió
 
 EXEC importaciones.Import_Asistencias
-    @rutaArch = 'C:\Users\Public\Documents\Datos socios.xlsx'
+    @rutaArch = 'C:\Users\Public\Documents\Datos socios.xlsx',
+	@password = '#BBDA.2025'
 GO
 
 SELECT * FROM club.Empleado

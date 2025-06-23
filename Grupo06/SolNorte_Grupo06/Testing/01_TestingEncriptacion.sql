@@ -13,10 +13,10 @@
 USE Com2900G06
 GO
 
-EXEC club.sp_DesencriptarEmpleado @password = 'EkAHYL]cv92=#Z!1EuDH';
+EXEC club.sp_DesencriptarEmpleado @password = '#BBDA.2025';
 GO
 SELECT * FROM club.Empleado
 
-EXEC club.sp_EncriptarEmpleado @password = 'EkAHYL]cv92=#Z!1EuDH';
+EXEC club.sp_EncriptarEmpleado @password = '#BBDA.2025';
 GO
 SELECT * FROM club.Empleado

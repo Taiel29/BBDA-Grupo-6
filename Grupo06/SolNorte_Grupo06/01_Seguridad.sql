@@ -285,7 +285,7 @@ AFTER INSERT
 AS
 BEGIN
 	Declare @password as varchar(50)
-	Set @password = 'EkAHYL]cv92=#Z!1EuDH'
+	Set @password = '#BBDA.2025'
 		-- Encriptar y actualizar las columnas encriptadas
 		UPDATE emp
 		SET 

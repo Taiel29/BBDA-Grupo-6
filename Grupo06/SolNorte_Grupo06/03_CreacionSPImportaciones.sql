@@ -206,7 +206,8 @@ GO
 -- Importar asistencias a clases
 
 CREATE OR ALTER PROCEDURE importaciones.Import_Asistencias
-	@rutaArch VARCHAR(255)
+	@rutaArch VARCHAR(255),
+	@password VARCHAR(255)
 AS
 BEGIN
 	SET NOCOUNT ON;
@@ -270,7 +271,7 @@ BEGIN
 	FROM #TempImport_Asiste tmp
 	WHERE CHARINDEX(' ', tmp.Profesor) > 0;
 
-	EXEC club.sp_DesencriptarEmpleado @password = 'EkAHYL]cv92=#Z!1EuDH';
+	EXEC club.sp_DesencriptarEmpleado @password;
 
 	INSERT INTO club.Empleado(Nombre, Apellido, Area)
 	SELECT DISTINCT
@@ -284,7 +285,7 @@ BEGIN
 		WHERE LTRIM(RTRIM(e.Nombre)) = pd.Profesor_Nombre
 		  AND LTRIM(RTRIM(e.Apellido)) = pd.Profesor_Apellido
 	);
-	EXEC club.sp_DesencriptarEmpleado @password = 'EkAHYL]cv92=#Z!1EuDH';
+	EXEC club.sp_DesencriptarEmpleado @password;
 
 	INSERT INTO actividades.Clase(Día_De_La_Semana, ID_Profesor, ID_Actividad)
 	SELECT DISTINCT
@@ -330,7 +331,7 @@ BEGIN
 	
 	DROP TABLE #TempImport_Asiste;
 	DROP TABLE #Datos_Procesados;
-	EXEC club.sp_EncriptarEmpleado @password = 'EkAHYL]cv92=#Z!1EuDH';
+	EXEC club.sp_EncriptarEmpleado @password;
 
 	Print('Asistencias importadas')
 
