@@ -1,6 +1,6 @@
 --En este script se realiza la creación de la base de datos y las tablas contenidas en esta junto con sus restricciones
 
---Fecha de entrega: 17/06/2025
+--Fecha de entrega: 24/06/2025
 --Comisión: 2900
 --Grupo: 6
 --Base de datos Aplicada
@@ -177,8 +177,8 @@ IF OBJECT_ID(N'tesoreria.Medio_Pago', N'U') IS NOT NULL
 GO
 
 CREATE TABLE tesoreria.Medio_Pago(
-	ID INT IDENTITY(1,1) PRIMARY KEY
-	--Capaz habría que meter otro atributo
+	ID INT IDENTITY(1,1) PRIMARY KEY,
+	Descripcion VARCHAR(20) NOT NULL
 );
 
 IF OBJECT_ID(N'tesoreria.Tarjeta', N'U') IS NOT NULL
@@ -424,7 +424,10 @@ CREATE TABLE tesoreria.Pago(
 	ID INT IDENTITY(1,1) PRIMARY KEY,
 	ID_Pago BIGINT,
 	Fecha_Pago DATE,
-	Hora_Pago TIME
+	Hora_Pago TIME,
+	Medio_Pago INT,
+	FOREIGN KEY(Medio_Pago) REFERENCES tesoreria.Medio_Pago(ID) ON DELETE CASCADE
+
 );
 
 IF OBJECT_ID(N'tesoreria.Recargo', N'U') IS NOT NULL
@@ -531,21 +534,10 @@ CREATE TABLE tesoreria.Cuota(
 );
 GO
 
---VER COMO CARGAR ESTOS DATOS
-INSERT INTO socios.Estado_Socio VALUES
-('ACTIVO'),
-('MOROSO'),
-('INACTIVO');
-GO
-
-INSERT INTO tesoreria.Estado_Factura VALUES
-('PAGADA'),
-('GENERADA');
-GO
-
 CREATE TABLE importaciones.Errores_Importacion_Socios(
 	ID INT IDENTITY(1,1) PRIMARY KEY,
 	DNI CHAR(9),
+	Nro_Socio CHAR(8),
 	Numero_De_Socio_OS VARCHAR(50),
 	Motivo VARCHAR(200),
 	Fecha_Registro DATETIME DEFAULT GETDATE()

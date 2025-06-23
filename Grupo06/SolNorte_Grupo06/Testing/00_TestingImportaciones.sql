@@ -1,6 +1,6 @@
 --En este script se prueba la funcionalidad de los scripts de importación a tablas
 
---Fecha de entrega: 19/06/2025
+--Fecha de entrega: 24/06/2025
 --Comisión: 2900
 --Grupo: 6
 --Base de datos Aplicada
@@ -46,7 +46,7 @@ GO
 
 SELECT * FROM socios.Socio
 SELECT s.ID, s.Nombre, s.Apellido, s.Fecha_Nacimiento, cs.Nombre FROM socios.Socio s JOIN socios.Categoria_Socio cs on cs.ID = s.ID_Categoria_Socio
-SELECT * FROM importaciones.Errores_Importacion_Socios
+SELECT * FROM importaciones.Errores_Importacion_Socios ORDER BY Nro_Socio
 
 -- Probar SP "importaciones.Importar_Grupo_Familiar"
 -- Al final deben quedar actualizadas y sin duplicados:
@@ -58,7 +58,9 @@ EXEC importaciones.Importar_Grupo_Familiar
 GO
 
 SELECT * FROM socios.Socio ORDER BY Nro_Socio
-SELECT * FROM socios.Grupo_Familiar
+SELECT ss.Nro_Socio
+FROM socios.Socio ss
+JOIN socios.Grupo_Familiar gf on ss.ID = gf.ID_Socio_Responsable
 
 -- Probar SP "importaciones.Import_Asistencias"
 -- Al final deben quedar actualizadas y sin duplicados:
@@ -85,10 +87,18 @@ GO
 
 SELECT * FROM tesoreria.Tarifa_Pileta
 
+-- Probar SP "importaciones.ImportarPagoCuotasDesdeExcel"
+-- Al final deben quedar actualizadas y sin duplicados:
+-- tesoreria.Medio_Pago con las descripciones de los tipos de pago disponibles
+-- Tabla tesoreria.Cuota con el mes y socio que corresponde, y su factura relacionada
+-- Tabla tesoreria.Pago con su ID y Fecha de pago, y NULL en la hora de pago (Dato que no se nos proporciona)
+-- Tabla tesoreria.Factura con las fechas, importe, e ID_Pago correspondientes
+
 EXEC importaciones.ImportarPagoCuotasDesdeExcel
 	@RutaExcel = 'C:\Users\Public\Documents\Datos socios.xlsx'
 GO
 
+SELECT * From tesoreria.Medio_Pago
 SELECT * FROM tesoreria.Cuota
 SELECT * FROM tesoreria.Pago
 SELECT * FROM tesoreria.Factura

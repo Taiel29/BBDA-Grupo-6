@@ -1,6 +1,6 @@
 --En este script se realiza la creación de los Store Procedure para importar archivos
 
---Fecha de entrega: 17/06/2025
+--Fecha de entrega: 24/06/2025
 --Comisión: 2900
 --Grupo: 6
 --Base de datos Aplicada
@@ -11,7 +11,7 @@
 --Miguez Alejo - DNI: 41667306
 
 --Importar tarifas y actividades
-
+ 
 USE Com2900G06
 GO
 
@@ -38,7 +38,8 @@ CREATE OR ALTER PROCEDURE importaciones.Import_Actividades
 	@rutaArch VARCHAR(255)
 AS
 BEGIN
-	
+	SET NOCOUNT ON;
+
 	CREATE TABLE #TempImport_Actividad(
     ID INT IDENTITY(1,1) Primary Key,
     Actividad VARCHAR(50) NOT NULL,
@@ -84,6 +85,7 @@ BEGIN
 		  AND a.ID_Tarifa = t.ID
 	);
 
+	Print('Actividades importadas')
 
 	DROP TABLE #TempImport_Actividad;
 END
@@ -94,6 +96,7 @@ CREATE OR ALTER PROCEDURE importaciones.Import_Tarifas_Pileta
 	@rutaArch VARCHAR(255)
 AS
 BEGIN
+	SET NOCOUNT ON;
 	CREATE TABLE #TempImport_Tarifa_Pileta(
     ID INT IDENTITY(1,1) Primary Key,
     Descripcion VARCHAR(50),
@@ -136,6 +139,8 @@ BEGIN
 	FROM #TempImport_Tarifa_Pileta
 	WHERE Valor_Invitados IS NOT NULL;
 
+	Print('Tarifas de pileta importadas')
+
 	DROP TABLE #TempImport_Tarifa_Pileta;
 END
 GO
@@ -146,6 +151,8 @@ CREATE OR ALTER PROCEDURE importaciones.Import_Tarifas_Cuotas
 	@rutaArch VARCHAR(255)
 AS
 BEGIN
+	SET NOCOUNT ON;
+
 	CREATE TABLE #TempImport_Tarifa_Cuota(
     ID INT IDENTITY(1,1) Primary Key,
     Descripcion VARCHAR(50),
@@ -190,6 +197,9 @@ BEGIN
 		);
 
 	DROP TABLE #TempImport_Tarifa_Cuota;
+
+	Print('Categorías y tarifas de socios importadas')
+
 END
 GO
 
@@ -199,19 +209,17 @@ CREATE OR ALTER PROCEDURE importaciones.Import_Asistencias
 	@rutaArch VARCHAR(255)
 AS
 BEGIN
-	-- Crear tabla temporal para importar los datos del archivo Excel.
-	-- This temporary table will hold the raw data from the Excel file.
+	SET NOCOUNT ON;
+
 	CREATE TABLE #TempImport_Asiste (
 		ID INT IDENTITY(1,1) PRIMARY KEY,
 		Descripcion VARCHAR(50),
 		Fecha DATE NOT NULL,
-		Asiste CHAR(1) NOT NULL, -- Changed to CHAR(1) for consistency with LEFT(..., 1)
+		Asiste CHAR(1) NOT NULL,
 		ID_Socio CHAR(8) NOT NULL,
 		Profesor VARCHAR(50) NOT NULL
 	);
 	
-	-- Import data from the Excel file into the temporary table.
-	-- OPENROWSET is used to read data from the Excel spreadsheet.
 	EXEC('INSERT INTO #TempImport_Asiste (Descripcion, Fecha, Asiste, ID_Socio, Profesor)' +
 		' SELECT
 		LTRIM(RTRIM([Actividad])),
@@ -324,9 +332,10 @@ BEGIN
 	DROP TABLE #Datos_Procesados;
 	EXEC club.sp_EncriptarEmpleado @password = 'EkAHYL]cv92=#Z!1EuDH';
 
+	Print('Asistencias importadas')
+
 END
 GO
-
 
 CREATE OR ALTER PROCEDURE importaciones.Importar_Socios_Desde_Excel
     @RutaExcel VARCHAR(260)
@@ -351,6 +360,21 @@ BEGIN
         nro_OS VARCHAR(50),
         telefono_contacto_emergencia_OS VARCHAR(50)
     );
+
+	WITH nuevos_estados (estado) AS (
+		SELECT 'ACTIVO' UNION ALL
+		SELECT 'MOROSO' UNION ALL
+		SELECT 'INACTIVO'
+	)
+	-- Insertar solo si no existe en la tabla
+	INSERT INTO socios.Estado_Socio (Descripcion)
+	SELECT ne.estado
+	FROM nuevos_estados ne
+	WHERE NOT EXISTS (
+		SELECT 1
+		FROM socios.Estado_Socio es
+		WHERE es.Descripcion = ne.estado
+	);
 
     DECLARE @sql NVARCHAR(MAX) = '
     INSERT INTO #SociosExcel (
@@ -437,17 +461,18 @@ BEGIN
 	--DATOS INVALIDOS
 	CREATE TABLE #Errores (
 		DNI CHAR(9),
+		Nro_Socio CHAR(8),
 		Numero_De_Socio_OS VARCHAR(50),
 		Motivo VARCHAR(255)
 	);
 
-	INSERT INTO #Errores (DNI, Numero_De_Socio_OS, Motivo)
-	SELECT DISTINCT DNI, nro_OS, 'Fecha de nacimiento inválida (NULL luego de conversión)'
+	INSERT INTO #Errores (DNI, Nro_Socio, Numero_De_Socio_OS, Motivo)
+	SELECT DISTINCT DNI, nro, nro_OS, 'Fecha de nacimiento inválida (NULL luego de conversión)'
 	FROM #SociosExcel
 	WHERE fecha IS NULL;
 
-	INSERT INTO #Errores (DNI, Numero_De_Socio_OS, Motivo)
-	SELECT DISTINCT s.DNI, s.nro_OS, 'DNI duplicado en el Excel. Se inserta solo primer encuentro'
+	INSERT INTO #Errores (DNI, Nro_Socio, Numero_De_Socio_OS, Motivo)
+	SELECT DISTINCT s.DNI, nro, s.nro_OS, 'DNI duplicado en el Excel. Se inserta solo primer encuentro'
 	FROM #SociosExcel s
 	JOIN (
 		SELECT DNI
@@ -456,8 +481,8 @@ BEGIN
 		HAVING COUNT(*) > 1
 	) d ON s.DNI = d.DNI;
 
-	INSERT INTO #Errores (DNI, Numero_De_Socio_OS, Motivo)
-	SELECT DISTINCT s.DNI, s.nro_OS, 'Número de socio OS duplicado en el Excel. Se inserta solo primer encuentro'
+	INSERT INTO #Errores (DNI, Nro_Socio, Numero_De_Socio_OS, Motivo)
+	SELECT DISTINCT s.DNI,nro, s.nro_OS, 'Número de socio OS duplicado en el Excel. Se inserta solo primer encuentro'
 	FROM #SociosExcel s
 	JOIN (
 		SELECT nro_OS
@@ -467,12 +492,15 @@ BEGIN
 	) d ON s.nro_OS = d.nro_OS;
 
 	--Ingresar los inválidos
-	INSERT INTO importaciones.Errores_Importacion_Socios (DNI, Numero_De_Socio_OS, Motivo)
-	SELECT DISTINCT DNI, Numero_De_Socio_OS, Motivo
+	INSERT INTO importaciones.Errores_Importacion_Socios (DNI,Nro_Socio, Numero_De_Socio_OS, Motivo)
+	SELECT DISTINCT DNI, Nro_Socio, Numero_De_Socio_OS, Motivo
 	FROM #Errores;
 
 	DROP TABLE #Errores;
     DROP TABLE #SociosExcel;
+
+	Print('Socios responsables de pago importados')
+
 END;
 GO
 
@@ -576,54 +604,11 @@ BEGIN
 	JOIN socios.Grupo_Familiar gf ON gf.ID_Socio_Responsable = responsable.ID;
 
 	DROP TABLE #GrupoFamiliarExcel;
+
+	Print('Socios y grupos familiares importados')
+
 END;
 GO
-
-/*CREATE OR ALTER PROCEDURE importaciones.ImportarPagoCuotasDesdeExcel
-    @RutaExcel NVARCHAR(260)
-AS
-BEGIN
-	SET NOCOUNT ON;
-
-    IF OBJECT_ID('#PagoCuotasExcel') IS NOT NULL
-        DROP TABLE #PagoCuotasExcel;
-
-    CREATE TABLE #PagoCuotasExcel (
-        ID INT IDENTITY(1,1) PRIMARY KEY,
-        ID_Pago VARCHAR(50),
-		Fecha_Pago DATE,
-		Nro_Socio_RP VARCHAR(50),
-		Valor DECIMAL(10,2),
-		Medio_Pago VARCHAR(50)
-    );
-
-	DECLARE @sql NVARCHAR(MAX) = '
-    INSERT INTO #PagoCuotasExcel (
-        ID_Pago, Fecha_Pago, Nro_Socio_RP, Valor, Medio_Pago
-    )
-    SELECT
-        LTRIM(RTRIM(CAST(CONVERT(BIGINT, F1) AS VARCHAR))),
-		Ltrim(rtrim(F2)),
-        Ltrim(rtrim(F3)),
-        Ltrim(rtrim(F4)),
-		LTRIM(RTRIM(F5))
-    FROM OPENROWSET(
-        ''Microsoft.ACE.OLEDB.16.0'',
-        ''Excel 12.0;Database=' + @RutaExcel + ';HDR=NO'',
-        ''SELECT * FROM [pago cuotas$A2:E]''
-    );
-    ';
-
-    EXEC sp_executesql @sql;
-
-	--SELECT*FROM #PagoCuotasExcel;
-
-	INSERT INTO tesoreria.Cuota(Fecha_Inicio, Fecha_Final, Mes, ID_Socio)
-	SELECT DATEFROMPARTS(YEAR(pc.Fecha_Pago), MONTH(pc.Fecha_Pago), 1), 
-	EOMONTH(pc.Fecha_Pago), MONTH(pc.Fecha_Pago), s.ID
-	FROM #PagoCuotasExcel pc, socios.Socio s
-	WHERE pc.Nro_Socio_RP = s.Nro_Socio
-END;*/
 
 CREATE OR ALTER PROCEDURE importaciones.ImportarPagoCuotasDesdeExcel
     @RutaExcel VARCHAR(260)
@@ -643,6 +628,38 @@ BEGIN
         Medio_Pago VARCHAR(50)
     );
 
+	-- 1.1 Generar los estado de factura disponibles
+	WITH nuevos_estados (estado) AS (
+		SELECT 'PAGADA' UNION ALL
+		SELECT 'GENERADA'
+	)
+
+	INSERT INTO tesoreria.Estado_Factura(Descripcion)
+	SELECT ne.estado
+	FROM nuevos_estados ne
+	WHERE NOT EXISTS (
+		SELECT 1
+		FROM tesoreria.Estado_Factura es
+		WHERE es.Descripcion = ne.estado
+	);
+
+	-- 1.2 Generar los medios de pago disponibles
+	WITH nuevos_medios (descripcion) AS (
+		SELECT 'Tarjeta' UNION ALL
+		SELECT 'Transferencia' UNION ALL
+		SELECT 'Sucursal de Pago' UNION ALL
+		SELECT 'Debito Automatico'
+	)
+
+	INSERT INTO tesoreria.Medio_Pago(Descripcion)
+	SELECT nm.descripcion
+	FROM nuevos_medios nm
+	WHERE NOT EXISTS (
+		SELECT 1
+		FROM tesoreria.Medio_Pago es
+		WHERE es.Descripcion = nm.descripcion
+	);
+
     -- 2. Carga desde Excel
     DECLARE @sql NVARCHAR(MAX) = '
     INSERT INTO #PagosExcel (ID_PagoExcel, Fecha_Pago, Nro_Socio, Importe, Medio_Pago)
@@ -651,7 +668,10 @@ BEGIN
         TRY_CAST(F2 AS DATE),
         LTRIM(RTRIM(F3)),
         TRY_CAST(F4 AS DECIMAL(10,2)),
-        LTRIM(RTRIM(F5))
+        CASE
+			WHEN LTRIM(RTRIM(F5)) = ''efectivo'' THEN ''Sucursal de Pago''
+			ELSE LTRIM(RTRIM(F5))
+		END
     FROM OPENROWSET(
         ''Microsoft.ACE.OLEDB.16.0'',
         ''Excel 12.0;HDR=NO;Database=' + @RutaExcel + ''',
@@ -665,14 +685,17 @@ BEGIN
         DROP TABLE #DatosPago;
 
     SELECT 
-        ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS ID_Interno,
-		ID_PagoExcel,
-        Fecha_Pago,
-        CAST(GETDATE() AS TIME) AS Hora_Pago,
-        Nro_Socio,
-        Importe
-    INTO #DatosPago
-    FROM #PagosExcel;
+		ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS ID_Interno,
+		pe.ID_PagoExcel,
+		pe.Fecha_Pago,
+		NULL AS Hora_Pago,
+		pe.Nro_Socio,
+		pe.Importe,
+		mp.ID AS ID_Medio_Pago
+	INTO #DatosPago
+	FROM #PagosExcel pe
+	INNER JOIN tesoreria.Medio_Pago mp 
+		ON LTRIM(RTRIM(LOWER(mp.Descripcion))) = LTRIM(RTRIM(LOWER(pe.Medio_Pago)));
 
     -- 4. Tabla para capturar pagos insertados
     IF OBJECT_ID('tempdb..#PagosInsertados') IS NOT NULL
@@ -688,22 +711,24 @@ BEGIN
     );
 
     -- 5. Insertar pagos
+
    MERGE INTO tesoreria.Pago AS t
-	USING (
+   USING (
 		SELECT 
 			ID_Interno,
 			ID_PagoExcel,
 			Fecha_Pago,
 			Hora_Pago,
 			src.Nro_Socio,
-			Importe
+			Importe,
+			ID_Medio_Pago
 		FROM #DatosPago src
 		INNER JOIN socios.Socio s ON src.Nro_Socio = s.Nro_Socio
 	) AS src
 	ON 1 = 0
 	WHEN NOT MATCHED THEN
-		INSERT (ID_Pago, Fecha_Pago, Hora_Pago)
-		VALUES (src.ID_PagoExcel, src.Fecha_Pago, src.Hora_Pago)
+		INSERT (ID_Pago, Fecha_Pago, Hora_Pago, Medio_Pago)
+		VALUES (src.ID_PagoExcel, src.Fecha_Pago, NULL, src.ID_Medio_Pago)
 	OUTPUT 
 		INSERTED.ID AS ID_Pago,
 		src.ID_Interno,
@@ -742,7 +767,7 @@ BEGIN
 			ID_Recargo, ID_Estado, ID_Pago
 		)
 		VALUES (
-			1, 1, src.Fecha_Pago, CAST(GETDATE() AS TIME), src.Importe,
+			1, 1, src.Fecha_Pago, NULL, src.Importe,
 			DATEADD(DAY, 5, src.Fecha_Pago), DATEADD(DAY, 10, src.Fecha_Pago),
 			NULL, 1, src.ID_Pago
 		)
@@ -779,6 +804,7 @@ CREATE or ALTER PROCEDURE importaciones.Importar_Lluvia
     @RutaArch1 VARCHAR(260), @RutaArch2 VARCHAR(260)
 AS
 BEGIN
+	SET NOCOUNT ON;
 
 	IF OBJECT_ID('tempdb..##TempImport_lluvia') IS NULL
 	BEGIN
@@ -825,7 +851,8 @@ BEGIN
 		FROM ##TempImport_lluvia
 	)
 	DELETE FROM Duplicados WHERE rn > 1 OR Duplicados.Lluvia = 0;
-
+	
+	Print('Lluvias del 2024 y 2025 importadas')
 
 END
 GO

@@ -1,6 +1,6 @@
 --En este script se prueba la funcionalidad de los scripts de encriptado y desencriptado de tablas
 
---Fecha de entrega: 19/06/2025
+--Fecha de entrega: 24/06/2025
 --Comisión: 2900
 --Grupo: 6
 --Base de datos Aplicada

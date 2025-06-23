@@ -73,23 +73,29 @@
           <AssociatedConnUserName />
           <FullPath>00_CreacionBaseYTablas.sql</FullPath>
         </FileNode>
-        <FileNode Name="01_CreacionSPImportaciones.sql">
+        <FileNode Name="01_Seguridad.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:TAIELPC:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>TAIELPC</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>01_CreacionSPImportaciones.sql</FullPath>
+          <FullPath>01_Seguridad.sql</FullPath>
         </FileNode>
-        <FileNode Name="02_CreacionSPReportes.sql">
+        <FileNode Name="02_CreacionSPManejoTablas.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:TAIELPC:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>TAIELPC</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>02_CreacionSPReportes.sql</FullPath>
+          <FullPath>02_CreacionSPManejoTablas.sql</FullPath>
         </FileNode>
-        <FileNode Name="03_Seguridad.sql">
+        <FileNode Name="03_CreacionSPImportaciones.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:TAIELPC:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>TAIELPC</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>03_Seguridad.sql</FullPath>
+          <FullPath>03_CreacionSPImportaciones.sql</FullPath>
+        </FileNode>
+        <FileNode Name="04_CreacionSPReportes.sql">
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:TAIELPC:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>TAIELPC</AssociatedConnSrvName>
+          <AssociatedConnUserName />
+          <FullPath>04_CreacionSPReportes.sql</FullPath>
         </FileNode>
       </Items>
     </LogicalFolder>
