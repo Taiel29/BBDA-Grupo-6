@@ -59,17 +59,49 @@ BEGIN
 	UPDATE #TempImport_Actividad
 	SET Actividad = 'Ajedrez'
 	WHERE LTRIM(RTRIM(Actividad)) COLLATE Latin1_General_CI_AI = 'Ajederez';
+	
+	IF EXISTS (
+        SELECT 1
+        FROM #TempImport_Actividad
+        WHERE Actividad IS NULL OR Importe IS NULL OR Vigente_Hasta IS NULL
+    )
+        PRINT 'Algunos registros tienen campos nulos (Actividad, Importe o Vigente_Hasta).';
 
-	INSERT INTO tesoreria.Tarifa_Actividad(Importe_Por_Mes, Vigente_Hasta)
-	SELECT DISTINCT Importe, Vigente_Hasta
-	FROM #TempImport_Actividad tmp
-	WHERE NOT EXISTS (
-		SELECT 1
-		FROM tesoreria.Tarifa_Actividad t
-		WHERE t.Importe_Por_Mes = tmp.Importe
-		  AND t.Vigente_Hasta = tmp.Vigente_Hasta
-		  AND tmp.Importe >= 0
-	);
+    -- Importes negativos
+    IF EXISTS (
+        SELECT 1
+        FROM #TempImport_Actividad
+        WHERE Importe < 0
+    )
+        PRINT 'Algunos registros tienen importes negativos.';
+
+    -- Tarifas ya existentes
+    IF EXISTS (
+        SELECT 1
+        FROM #TempImport_Actividad tmp
+        WHERE Importe IS NOT NULL AND Vigente_Hasta IS NOT NULL
+        AND EXISTS (
+            SELECT 1
+            FROM tesoreria.Tarifa_Actividad t
+            WHERE t.Importe_Por_Mes = tmp.Importe
+              AND t.Vigente_Hasta = tmp.Vigente_Hasta
+        )
+    )
+        PRINT 'Algunas tarifas ya existen en la base de datos.';
+
+    -- Inserción de las tarifas válidas
+    INSERT INTO tesoreria.Tarifa_Actividad (Importe_Por_Mes, Vigente_Hasta)
+    SELECT DISTINCT tmp.Importe, tmp.Vigente_Hasta
+    FROM #TempImport_Actividad tmp
+    WHERE tmp.Actividad IS NOT NULL
+      AND tmp.Importe IS NOT NULL AND tmp.Importe >= 0
+      AND tmp.Vigente_Hasta IS NOT NULL
+      AND NOT EXISTS (
+          SELECT 1
+          FROM tesoreria.Tarifa_Actividad t
+          WHERE t.Importe_Por_Mes = tmp.Importe
+            AND t.Vigente_Hasta = tmp.Vigente_Hasta
+      );
 
 	INSERT INTO actividades.Actividad (Descripcion, ID_Tarifa)
 	SELECT tmp.Actividad, t.ID
@@ -563,39 +595,43 @@ BEGIN
 	WHERE s.Nro_Socio = gf.nro_RP;
 
 	INSERT INTO socios.Socio (
-		Nro_Socio,
-		DNI,
-		Fecha_Nacimiento,
-		Apellido,
-		Nombre,
-		Numero_De_Socio_OS,
-		Telefono_De_Emergencias_OS,
-		Telefono_Contacto_Emergencia,
-		Nombre_Obra_Social,
-		Telefono_Contacto,
-		ID_Estado_Socio,
-		ID_Grupo_Familiar,
-		ID_Categoria_Socio
+    Nro_Socio,
+    DNI,
+    Fecha_Nacimiento,
+    Apellido,
+    Nombre,
+    Numero_De_Socio_OS,
+    Telefono_De_Emergencias_OS,
+    Telefono_Contacto_Emergencia,
+    Nombre_Obra_Social,
+    Telefono_Contacto,
+    ID_Estado_Socio,
+    ID_Grupo_Familiar,
+    ID_Categoria_Socio
 	)
 	SELECT
-		LEFT(nro, 7),
-		DNI,
-		fecha,
-		UPPER(apellido),
-		UPPER(nombre),
-		nro_OS,
-		telefono_contacto_emergencia_OS,
-		telefono_contacto_emergencia,
-		nombre_OS,
-		telefono_contacto,
+		LEFT(gf.nro, 7),
+		gf.DNI,
+		gf.fecha,
+		UPPER(gf.apellido),
+		UPPER(gf.nombre),
+		gf.nro_OS,
+		gf.telefono_contacto_emergencia_OS,
+		gf.telefono_contacto_emergencia,
+		gf.nombre_OS,
+		gf.telefono_contacto,
 		1,
 		NULL,
 		CASE 
-			WHEN DATEDIFF(YEAR, fecha, GETDATE()) <= 12 THEN 1
-			WHEN DATEDIFF(YEAR, fecha, GETDATE()) <= 17 THEN 2
+			WHEN DATEDIFF(YEAR, gf.fecha, GETDATE()) <= 12 THEN 1
+			WHEN DATEDIFF(YEAR, gf.fecha, GETDATE()) <= 17 THEN 2
 			ELSE 3
 		END
-	FROM #GrupoFamiliarExcel;
+	FROM #GrupoFamiliarExcel gf
+	WHERE NOT EXISTS (
+		SELECT 1 FROM socios.Socio s WHERE s.Nro_Socio = LEFT(gf.nro, 7)
+	);
+
 
 	UPDATE s
 	SET s.ID_Grupo_Familiar = gf.ID
@@ -629,38 +665,6 @@ BEGIN
         Medio_Pago VARCHAR(50)
     );
 
-	-- 1.1 Generar los estado de factura disponibles
-	WITH nuevos_estados (estado) AS (
-		SELECT 'PAGADA' UNION ALL
-		SELECT 'GENERADA'
-	)
-
-	INSERT INTO tesoreria.Estado_Factura(Descripcion)
-	SELECT ne.estado
-	FROM nuevos_estados ne
-	WHERE NOT EXISTS (
-		SELECT 1
-		FROM tesoreria.Estado_Factura es
-		WHERE es.Descripcion = ne.estado
-	);
-
-	-- 1.2 Generar los medios de pago disponibles
-	WITH nuevos_medios (descripcion) AS (
-		SELECT 'Tarjeta' UNION ALL
-		SELECT 'Transferencia' UNION ALL
-		SELECT 'Sucursal de Pago' UNION ALL
-		SELECT 'Debito Automatico'
-	)
-
-	INSERT INTO tesoreria.Medio_Pago(Descripcion)
-	SELECT nm.descripcion
-	FROM nuevos_medios nm
-	WHERE NOT EXISTS (
-		SELECT 1
-		FROM tesoreria.Medio_Pago es
-		WHERE es.Descripcion = nm.descripcion
-	);
-
     -- 2. Carga desde Excel
     DECLARE @sql NVARCHAR(MAX) = '
     INSERT INTO #PagosExcel (ID_PagoExcel, Fecha_Pago, Nro_Socio, Importe, Medio_Pago)
@@ -670,7 +674,7 @@ BEGIN
         LTRIM(RTRIM(F3)),
         TRY_CAST(F4 AS DECIMAL(10,2)),
         CASE
-			WHEN LTRIM(RTRIM(F5)) = ''efectivo'' THEN ''Sucursal de Pago''
+			WHEN LTRIM(RTRIM(F5)) = ''efectivo'' THEN ''SUCURSAL DE PAGO''
 			ELSE LTRIM(RTRIM(F5))
 		END
     FROM OPENROWSET(
@@ -696,7 +700,7 @@ BEGIN
 	INTO #DatosPago
 	FROM #PagosExcel pe
 	INNER JOIN tesoreria.Medio_Pago mp 
-		ON LTRIM(RTRIM(LOWER(mp.Descripcion))) = LTRIM(RTRIM(LOWER(pe.Medio_Pago)));
+		ON LTRIM(RTRIM(UPPER(mp.Descripcion))) = LTRIM(RTRIM(UPPER(pe.Medio_Pago)));
 
     -- 4. Tabla para capturar pagos insertados
     IF OBJECT_ID('tempdb..#PagosInsertados') IS NOT NULL

@@ -279,7 +279,7 @@ IF EXISTS (SELECT 1 FROM sys.triggers WHERE name='trg_Empleado_Encrypt')
     DROP TRIGGER club.trg_Empleado_Encrypt;
 GO
 
-CREATE TRIGGER club.trg_Empleado_Encrypt
+CREATE OR ALTER TRIGGER club.trg_Empleado_Encrypt
 ON club.Empleado
 AFTER INSERT
 AS

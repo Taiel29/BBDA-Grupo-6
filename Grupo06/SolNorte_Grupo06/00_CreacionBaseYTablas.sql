@@ -46,6 +46,7 @@ IF SCHEMA_ID(N'importaciones') IS NULL
 
 IF SCHEMA_ID(N'reportes') IS NULL
     EXEC('CREATE SCHEMA reportes');
+
 -- CREACIÓN DE TABLAS--
 
 IF OBJECT_ID(N'socios.Grupo_Familiar', N'U') IS NOT NULL
@@ -178,7 +179,7 @@ GO
 
 CREATE TABLE tesoreria.Medio_Pago(
 	ID INT IDENTITY(1,1) PRIMARY KEY,
-	Descripcion VARCHAR(20) NOT NULL
+	Descripcion VARCHAR(20) UNIQUE NOT NULL
 );
 
 IF OBJECT_ID(N'tesoreria.Tarjeta', N'U') IS NOT NULL
