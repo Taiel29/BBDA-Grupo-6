@@ -5,3 +5,6 @@ Nomenclaturas usadas hasta ahora:
 - Los roles creados inician con el prefijo rol_
 - Los users creados inician con el prefijo user_
 - Los logins creados inician con el prefijo login_
+- SP para insertar en tablas utilizan el esquema de la tabla a insertar y el prefijo Insert junto al nombre de la tabla
+- SP para modificar datos en tablas utilizan el esquema de la tabla a insertar y el prefijo Update junto al nombre de la tabla
+- SP para eliminar filas en tablas utilizan el esquema de la tabla a insertar y el prefijo Delete junto al nombre de la tabla
