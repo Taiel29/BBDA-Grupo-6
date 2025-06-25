@@ -8,7 +8,6 @@
 --Fariello Ramiro - DNI: 46124109
 --Rojas Taiel Ezequiel - DNI: 46183434
 --Cropalati Franco Nicolas - DNI: 43404823
---Miguez Alejo - DNI: 41667306
 
 IF EXISTS (SELECT name FROM sys.databases WHERE name = N'Com2900G06')
 BEGIN
@@ -260,20 +259,6 @@ CREATE TABLE actividades.Adulto_Responsable(
     Parentesco VARCHAR(50)
 );
 
-IF OBJECT_ID(N'actividades.Inscripcion', N'U') IS NOT NULL
-	DROP TABLE actividades.Inscripcion
-GO
-
-CREATE TABLE actividades.Inscripcion(
-    ID INT Identity(1,1) Primary Key,
-    Fecha DATE NOT NULL,
-    ID_Adulto INT NULL,
-    Tipo VARCHAR(20) NOT NULL,
-    ID_Socio INT NOT NULL,
-    FOREIGN KEY (ID_Adulto) REFERENCES actividades.Adulto_Responsable(ID) ON DELETE CASCADE,
-    FOREIGN KEY (ID_Socio) REFERENCES socios.Socio(ID) ON DELETE CASCADE
-);
-
 IF OBJECT_ID(N'tesoreria.Tarifa_Actividad', N'U') IS NOT NULL
 	DROP TABLE tesoreria.Tarifa_Actividad
 GO
@@ -331,12 +316,6 @@ IF OBJECT_ID(N'actividades.Actividad_Extra', N'U') IS NOT NULL
 	DROP TABLE actividades.Actividad_Extra
 GO
 
-CREATE TABLE actividades.Actividad_Extra(
-	ID INT Identity(1,1) Primary Key,
---Probablemente vaya fecha pero no está en el DER
-	Tipo VARCHAR(20) NOT NULL,
-);
-
 IF OBJECT_ID(N'actividades.Reserva_SUM', N'U') IS NOT NULL
 	DROP TABLE actividades.Reserva_SUM
 GO
@@ -345,9 +324,7 @@ CREATE TABLE actividades.Reserva_SUM(
 	ID INT Identity(1,1) Primary Key,
 	Horario_Inicio TIME NOT NULL,
 	Horario_Fin TIME NOT NULL,
-	Monto_De_Reserva NUMERIC(10,2),
-	ID_Actividad_Extra INT,
-	FOREIGN KEY(ID_Actividad_Extra) REFERENCES actividades.Actividad_Extra(ID) ON DELETE CASCADE
+	Monto_De_Reserva NUMERIC(10,2)
 );
 
 IF OBJECT_ID(N'actividades.Colonia', N'U') IS NOT NULL
@@ -356,9 +333,7 @@ GO
 
 CREATE TABLE actividades.Colonia(
 	ID INT Identity(1,1) Primary Key,
-	Importe NUMERIC(10,2),
-	ID_Actividad_Extra INT,
-	FOREIGN KEY(ID_Actividad_Extra) REFERENCES actividades.Actividad_Extra(ID) ON DELETE CASCADE
+	Importe NUMERIC(10,2)
 );
 
 IF OBJECT_ID(N'tesoreria.Tarifa_Pileta', N'U') IS NOT NULL
@@ -380,9 +355,37 @@ CREATE TABLE actividades.Pileta(
 	ID INT Identity(1,1) Primary Key,
 --Seguramente va fecha acá
 	ID_Tarifa_Pileta INT,
-	ID_Actividad_Extra INT,
 	FOREIGN KEY(ID_Tarifa_Pileta) REFERENCES tesoreria.Tarifa_Pileta(ID) ON DELETE CASCADE,
-	FOREIGN KEY(ID_Actividad_Extra) REFERENCES actividades.Actividad_Extra(ID) ON DELETE CASCADE
+);
+
+IF OBJECT_ID(N'actividades.Inscripcion', N'U') IS NOT NULL
+	DROP TABLE actividades.Inscripcion
+GO
+
+CREATE TABLE actividades.Actividad_Extra(
+	ID INT Identity(1,1) Primary Key,
+--Probablemente vaya fecha pero no está en el DER
+	Tipo VARCHAR(20) NOT NULL,
+	ID_Reserva INT NULL,
+	ID_Colonia INT NULL,
+	ID_Pileta INT NULL,
+	FOREIGN KEY(ID_Reserva) REFERENCES actividades.Reserva_SUM(ID) ON DELETE CASCADE,
+	FOREIGN KEY(ID_Colonia) REFERENCES actividades.Colonia(ID) ON DELETE CASCADE,
+	FOREIGN KEY(ID_Pileta) REFERENCES actividades.Pileta(ID) ON DELETE CASCADE
+);
+
+CREATE TABLE actividades.Inscripcion(
+    ID INT Identity(1,1) Primary Key,
+    Fecha DATE NOT NULL,
+    ID_Adulto INT NULL,
+    Tipo VARCHAR(20) NOT NULL,
+    ID_Socio INT NOT NULL,
+	ID_Actividad INT NULL,
+	ID_Actividad_Extra INT NULL,
+    FOREIGN KEY (ID_Adulto) REFERENCES actividades.Adulto_Responsable(ID) ON DELETE CASCADE,
+    FOREIGN KEY (ID_Socio) REFERENCES socios.Socio(ID) ON DELETE CASCADE,
+	FOREIGN KEY (ID_Actividad) REFERENCES actividades.Actividad(ID) ON DELETE CASCADE,
+    FOREIGN KEY (ID_Actividad_Extra) REFERENCES actividades.Actividad_Extra(ID) ON DELETE CASCADE
 );
 
 IF OBJECT_ID(N'socios.Invitado', N'U') IS NOT NULL

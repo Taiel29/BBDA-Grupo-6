@@ -8,7 +8,6 @@
 --Fariello Ramiro - DNI: 46124109
 --Rojas Taiel Ezequiel - DNI: 46183434
 --Cropalati Franco Nicolas - DNI: 43404823
---Miguez Alejo - DNI: 41667306
 
 /* REPORTE 3
 Reporte de la cantidad de socios que han realizado alguna actividad de forma alternada
