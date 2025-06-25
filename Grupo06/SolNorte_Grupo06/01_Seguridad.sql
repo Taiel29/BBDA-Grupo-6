@@ -8,8 +8,9 @@
 --Fariello Ramiro - DNI: 46124109
 --Rojas Taiel Ezequiel - DNI: 46183434
 --Cropalati Franco Nicolas - DNI: 43404823
+--Miguez Alejo - DNI: 41667306
 
----Creación de Login---
+-- Creación de Login---
 
 USE master
 GO

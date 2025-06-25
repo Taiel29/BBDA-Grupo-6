@@ -8,6 +8,7 @@
 --Fariello Ramiro - DNI: 46124109
 --Rojas Taiel Ezequiel - DNI: 46183434
 --Cropalati Franco Nicolas - DNI: 43404823
+--Miguez Alejo - DNI: 41667306
 
 --Importar tarifas y actividades
  
@@ -21,6 +22,14 @@ GO
 EXEC sp_configure 'Ad Hoc Distributed Queries', 1;
 RECONFIGURE;
 GO
+
+EXEC master.dbo.sp_MSset_oledb_prop 
+    N'Microsoft.ACE.OLEDB.16.0', 
+    N'AllowInProcess', 1;
+    
+EXEC master.dbo.sp_MSset_oledb_prop 
+    N'Microsoft.ACE.OLEDB.16.0', 
+    N'DynamicParameters', 1;
 */
 
 --Importar tarifas de actividades y crear las actividades si no están
@@ -614,9 +623,9 @@ BEGIN
 		1,
 		NULL,
 		CASE 
-			WHEN DATEDIFF(YEAR, gf.fecha, GETDATE()) <= 12 THEN 3
+			WHEN DATEDIFF(YEAR, gf.fecha, GETDATE()) <= 12 THEN 1
 			WHEN DATEDIFF(YEAR, gf.fecha, GETDATE()) <= 17 THEN 2
-			ELSE 1
+			ELSE 3
 		END
 	FROM #GrupoFamiliarExcel gf
 	WHERE NOT EXISTS (
@@ -644,6 +653,7 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
+    -- 1. Tabla temporal para datos del Excel
     IF OBJECT_ID('tempdb..#PagosExcel') IS NOT NULL
         DROP TABLE #PagosExcel;
 
@@ -655,6 +665,7 @@ BEGIN
         Medio_Pago VARCHAR(50)
     );
 
+    -- 2. Carga desde Excel
     DECLARE @sql NVARCHAR(MAX) = '
     INSERT INTO #PagosExcel (ID_PagoExcel, Fecha_Pago, Nro_Socio, Importe, Medio_Pago)
     SELECT
@@ -674,6 +685,7 @@ BEGIN
 
     EXEC sp_executesql @sql;
 
+    -- 3. Agregar ID interno para enlazar datos
     IF OBJECT_ID('tempdb..#DatosPago') IS NOT NULL
         DROP TABLE #DatosPago;
 
@@ -690,6 +702,7 @@ BEGIN
 	INNER JOIN tesoreria.Medio_Pago mp 
 		ON LTRIM(RTRIM(UPPER(mp.Descripcion))) = LTRIM(RTRIM(UPPER(pe.Medio_Pago)));
 
+    -- 4. Tabla para capturar pagos insertados
     IF OBJECT_ID('tempdb..#PagosInsertados') IS NOT NULL
         DROP TABLE #PagosInsertados;
 
@@ -701,6 +714,8 @@ BEGIN
         Fecha_Pago DATE,
         Importe DECIMAL(10,2)
     );
+
+    -- 5. Insertar pagos
 
    MERGE INTO tesoreria.Pago AS t
    USING (
@@ -728,6 +743,7 @@ BEGIN
 		src.Importe
 	INTO #PagosInsertados (ID_Pago, ID_Interno, ID_Pago_OG, Nro_Socio, Fecha_Pago, Importe);
 
+    -- 6. Tabla para facturas insertadas
     IF OBJECT_ID('tempdb..#FacturasInsertadas') IS NOT NULL
         DROP TABLE #FacturasInsertadas;
 
@@ -737,6 +753,7 @@ BEGIN
         Nro_Socio CHAR(7)
     );
 
+    -- 7. Insertar facturas
     MERGE INTO tesoreria.Factura AS target
 	USING (
 		SELECT
@@ -763,6 +780,9 @@ BEGIN
 		INSERTED.ID, INSERTED.ID_Pago, src.Nro_Socio
 	INTO #FacturasInsertadas (ID_Factura, ID_Pago, Nro_Socio);
 
+    -- 8. Crear cuotas asociadas a las facturas
+	--SELECT * FROM #FacturasInsertadas;
+
     INSERT INTO tesoreria.Cuota (
         Fecha_Inicio, Fecha_Final, Mes, ID_Socio, ID_Factura
     )
@@ -775,6 +795,7 @@ BEGIN
     FROM #FacturasInsertadas fi, tesoreria.Factura f, socios.Socio s
 	WHERE s.Nro_Socio = fi.Nro_Socio AND fi.ID_Factura = f.ID
 
+    -- Limpieza
     DROP TABLE #PagosExcel;
     DROP TABLE #DatosPago;
     DROP TABLE #PagosInsertados;

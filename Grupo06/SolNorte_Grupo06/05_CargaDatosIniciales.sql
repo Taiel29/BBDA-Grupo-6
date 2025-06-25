@@ -9,29 +9,20 @@ aquellos que no se reciben pero se saben sus valores, tales como los medios de p
 --Fariello Ramiro - DNI: 46124109
 --Rojas Taiel Ezequiel - DNI: 46183434
 --Cropalati Franco Nicolas - DNI: 43404823
-
-USE Com2900G06
-GO
+--Miguez Alejo - DNI: 41667306
 
 EXEC tesoreria.Insert_Medio_Pago @Descripcion = 'TaRJeta'
-GO
 EXEC tesoreria.Insert_Medio_Pago @Descripcion = 'TRANSFERENCIA'
-GO
 EXEC tesoreria.Insert_Medio_Pago @Descripcion = 'sucursal de pago'
-GO
 EXEC tesoreria.Insert_Medio_Pago @Descripcion = 'Debito AUTOMÁTICO'
-GO
-
 
 EXEC tesoreria.Insert_Estado_Factura @Descripcion = 'PAgADA'
-GO
 EXEC tesoreria.Insert_Estado_Factura @Descripcion = 'GeNerAda'
-GO
 
 EXEC importaciones.Import_Actividades
     @rutaArch = 'C:\Users\Public\Documents\Datos socios.xlsx'
 GO
-WAITFOR DELAY '00:00:00.200';
+
 EXEC importaciones.Import_Tarifas_Cuotas
     @rutaArch = 'C:\Users\Public\Documents\Datos socios.xlsx'
 GO
