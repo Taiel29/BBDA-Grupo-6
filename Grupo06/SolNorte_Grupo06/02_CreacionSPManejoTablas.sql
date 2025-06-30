@@ -20,17 +20,17 @@ BEGIN
     SET @Descripcion = UPPER(@Descripcion);
 
     IF @Descripcion IS NULL OR ltrim(rtrim(@Descripcion)) = ''
-        Print('No se inserta medio de pago vacío')
+        RAISERROR('No se inserta medio de pago vacío.', 10, 1);
     ELSE
     BEGIN
         IF NOT EXISTS (SELECT 1 FROM tesoreria.Medio_Pago WHERE Descripcion = @Descripcion)
         BEGIN
             INSERT INTO tesoreria.Medio_Pago (Descripcion)
             VALUES (@Descripcion);
-            Print('Nuevo medio de pago registrado')
+            RAISERROR('Nuevo medio de pago registrado.', 10, 1);
         END
         ELSE
-            Print('El medio de pago ya existe')
+            RAISERROR('El medio de pago ya existe.', 10, 1);
     END
 END
 GO
@@ -43,17 +43,17 @@ BEGIN
     SET @Descripcion = UPPER(@Descripcion);
 
     IF @Descripcion IS NULL OR ltrim(rtrim(@Descripcion)) = ''
-        Print('No se inserta estado de factura vacío')
+        RAISERROR('No se inserta estado de factura vacío', 10, 1);
     ELSE
     BEGIN
         IF NOT EXISTS (SELECT 1 FROM tesoreria.Estado_Factura WHERE Descripcion = @Descripcion)
         BEGIN
             INSERT INTO tesoreria.Estado_Factura(Descripcion)
             VALUES (@Descripcion);
-            Print('Nuevo estado de factura registrado')
+            RAISERROR('Nuevo estado de factura registrado', 10, 1)
         END
         ELSE
-            Print('El estado de factura ya existe')
+            RAISERROR('El estado de factura ya existe', 10, 1)
     END
 END
 GO
@@ -68,20 +68,20 @@ BEGIN
     SET @Descripcion = UPPER(LEFT(@Descripcion, 1)) + LOWER(SUBSTRING(@Descripcion, 2, LEN(@Descripcion)))
 
     IF @Descripcion IS NULL OR @Descripcion = ''
-        Print('No se inserta actividad vacía')
+        RAISERROR('No se inserta actividad vacía', 10, 1)
     ELSE
     BEGIN
         IF (@IDTarifa IS NULL OR @IDTarifa = '' OR @IDTarifa < 0) OR NOT EXISTS (SELECT 1 FROM tesoreria.Tarifa_Actividad WHERE ID = @IDTarifa)
-            Print('Valor de tarifa inválido')
+            RAISERROR('Valor de tarifa inválido', 10, 1)
         ELSE
             IF NOT EXISTS (SELECT 1 FROM actividades.Actividad WHERE Descripcion = @Descripcion COLLATE Modern_Spanish_CI_AI)
             BEGIN
                 INSERT INTO actividades.Actividad(Descripcion, ID_Tarifa)
                 VALUES (@Descripcion, @IDTarifa);
-                Print('Nueva actividad registrada')
+                RAISERROR('Nueva actividad registrada', 10, 1)
             END
             ELSE
-                Print('La actividad ya existe')
+                RAISERROR('La actividad ya existe', 10, 1)
     END
 END
 GO
@@ -94,17 +94,17 @@ BEGIN
     SET @Descripcion = UPPER(@Descripcion);
 
     IF @Descripcion IS NULL OR ltrim(rtrim(@Descripcion)) = ''
-        Print('No se inserta medio de pago vacío')
+        RAISERROR('No se inserta medio de pago vacío', 10,1)
     ELSE
     BEGIN
         IF NOT EXISTS (SELECT 1 FROM tesoreria.Medio_Pago WHERE Descripcion = @Descripcion)
         BEGIN
             INSERT INTO tesoreria.Medio_Pago (Descripcion)
             VALUES (@Descripcion);
-            Print('Nuevo medio de pago registrado')
+            RAISERROR('Nuevo medio de pago registrado',10,1)
         END
         ELSE
-            Print('El medio de pago ya existe')
+            RAISERROR('El medio de pago ya existe',10,1)
     END
 END
 GO
@@ -117,21 +117,21 @@ BEGIN
     SET NOCOUNT ON
 
     IF @Valor IS NULL OR @Valor < 0
-        Print('Valor de tarifa negativo o inexistente')
+        RAISERROR('Valor de tarifa negativo o inexistente',10,1)
     ELSE
     BEGIN
         IF @Fecha IS NULL OR @Fecha < GETDATE()
-            Print('Fecha de vigencia nula o menor a la fecha actual')
+            RAISERROR('Fecha de vigencia nula o menor a la fecha actual',10,1)
         ELSE
             BEGIN
                 IF NOT EXISTS (SELECT 1 FROM tesoreria.Tarifa_Actividad ta WHERE ta.Importe_Por_Mes = @Valor AND ta.Vigente_Hasta = @Fecha)
                 BEGIN
                     INSERT INTO tesoreria.Tarifa_Actividad (Importe_Por_Mes, Vigente_Hasta)
                     VALUES (@Valor, @Fecha);
-                    Print('Nueva tarifa registrada')
+                    RAISERROR('Nueva tarifa registrada',10,1)
                 END
                 ELSE
-                    Print('La tarifa ya existe')
+                    RAISERROR('La tarifa ya existe',10,1)
             END
     END
 END
@@ -148,11 +148,11 @@ BEGIN
     SET @Descripcion = UPPER(LEFT(@Descripcion, 1)) + LOWER(SUBSTRING(@Descripcion, 2, LEN(@Descripcion)))
 
     IF @Descripcion IS NULL OR @Descripcion = ''
-        Print('No se acepta actividad vacía')
+        RAISERROR('No se acepta actividad vacía',10,1)
     ELSE
     BEGIN
         IF (@IDTarifa IS NULL OR @IDTarifa = '' OR @IDTarifa < 0) OR NOT EXISTS (SELECT 1 FROM tesoreria.Tarifa_Actividad WHERE ID = @IDTarifa)
-            Print('Valor de tarifa inválido')
+            RAISERROR('Valor de tarifa inválido',10,1)
         ELSE
         BEGIN
             IF EXISTS (SELECT 1 FROM actividades.Actividad WHERE Descripcion = @Descripcion COLLATE Modern_Spanish_CI_AI)
@@ -160,63 +160,167 @@ BEGIN
                 UPDATE actividades.Actividad
                 SET ID_Tarifa = @IDTarifa
                 WHERE Descripcion = @Descripcion COLLATE Modern_Spanish_CI_AI
-                Print('Nueva tarifa actualizada')
+                RAISERROR('Nueva tarifa actualizada',10,1)
             END
             ELSE
-                Print('La actividad no existe')
+                RAISERROR('La actividad no existe',10,1)
         END
     END
 END
 GO
 
+CREATE OR ALTER PROCEDURE tesoreria.Insert_Factura
+    @FechaEmision DATE,
+    @HoraEmision TIME,
+    @Importe DECIMAL(10,2),
+    @ID_Factura INT OUTPUT
+
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF (@Importe IS NULL OR @Importe < 0)
+    BEGIN
+        RAISERROR('El importe no puede ser negativo.', 10, 1);
+        RETURN;
+    END
+
+    INSERT INTO tesoreria.Factura (
+        PDV,
+        Numero,
+        Fecha_Emision,
+        Hora_Emision,
+        Importe,
+        Fecha_Primer_Vencimiento,
+        Fecha_Segundo_Vencimiento,
+        ID_Recargo,
+        ID_Estado,
+        ID_Pago
+    )
+    VALUES (
+        1,              
+        1,              
+        @FechaEmision,
+        @HoraEmision,
+        @Importe,
+        DATEADD(DAY, 5, @FechaEmision),            
+        DATEADD(DAY, 10, @FechaEmision),             
+        NULL,              
+        2,                
+        NULL              
+    );
+    SET @ID_Factura = SCOPE_IDENTITY();
+
+    RAISERROR ('Factura insertada con éxito.',10,1);
+END;
+GO
 ----------------------------------
 CREATE OR ALTER PROCEDURE actividades.Insert_Inscripcion_Pileta
     @NroSocio CHAR(8),
-    @IDTarifa VARCHAR(100),
+    @TipoPase VARCHAR(50),
     @Fecha DATE
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @ID_Socio INT,
-            @ID_Tarifa_Pileta INT,
-            @ID_Actividad_Extra INT
+    SET @TipoPase = ltrim(rtrim(UPPER(@TipoPase)))
 
-    SELECT @ID_Socio = ID
-    FROM socios.Socio
+    DECLARE @ID_Socio INT,
+            @FechaNacimiento DATE,
+            @Edad INT,
+            @ID_Pileta INT,
+            @ID_Tarifa_Pileta INT,
+            @ID_Actividad_Extra INT,
+            @ID_Factura INT,
+            @ImporteFactura DECIMAL(10,2),
+            @FechaEmision DATE,
+            @HoraEmision TIME;
+
+    SELECT @ID_Socio = ID,
+           @FechaNacimiento = ss.Fecha_Nacimiento
+    FROM socios.Socio ss
     WHERE Nro_Socio = @NroSocio;
 
     IF @ID_Socio IS NULL
     BEGIN
-        Print('El número de socio no existe.');
+        RAISERROR('El número de socio no existe.',10,1);
         RETURN;
     END
 
-    IF NOT EXISTS (SELECT 1 FROM tesoreria.Tarifa_Pileta tf WHERE tf.ID = @IDTarifa AND tf.Vigente_Hasta >= @Fecha)
+    SET @Edad = DATEDIFF(YEAR, @FechaNacimiento, @Fecha);
+    IF MONTH(@FechaNacimiento) > MONTH(@Fecha) OR 
+       (MONTH(@FechaNacimiento) = MONTH(@Fecha) AND DAY(@FechaNacimiento) > DAY(@Fecha))
     BEGIN
-        Print('No se encontró una tarifa vigente con la descripción proporcionada.');
+        SET @Edad = @Edad - 1;
+    END
+
+    SET @ID_Tarifa_Pileta = 
+        CASE 
+            WHEN UPPER(@TipoPase) = 'DIARIO'    AND @Edad < 12 THEN 2
+            WHEN UPPER(@TipoPase) = 'DIARIO'    AND @Edad >= 12 THEN 1
+            WHEN UPPER(@TipoPase) = 'TEMPORADA' AND @Edad < 12 THEN 4
+            WHEN UPPER(@TipoPase) = 'TEMPORADA' AND @Edad >= 12 THEN 3
+            WHEN UPPER(@TipoPase) = 'MENSUAL'   AND @Edad < 12 THEN 6
+            WHEN UPPER(@TipoPase) = 'MENSUAL'   AND @Edad >= 12 THEN 5
+            ELSE NULL
+        END;
+
+    IF @ID_Tarifa_Pileta IS NULL
+    BEGIN
+        RAISERROR('Tipo de pase inválido. Debe ser Diario, Mensual o Temporada.',10,1);
+        RETURN;
+    END
+    
+    SELECT @ImporteFactura = tp.Importe FROM tesoreria.Tarifa_Pileta tp WHERE tp.ID = @ID_Tarifa_Pileta;
+
+    IF EXISTS (
+        SELECT 1
+        FROM actividades.Inscripcion i
+            INNER JOIN actividades.Actividad_Extra ae ON ae.ID = i.ID_Actividad_Extra
+            INNER JOIN actividades.Pileta p ON p.ID = ae.ID_Pileta
+        WHERE 
+            i.ID_Socio = @ID_Socio
+            AND i.Fecha = @Fecha
+            AND p.ID_Tarifa_Pileta = @ID_Tarifa_Pileta
+    )
+    BEGIN
+        RAISERROR('Ya existe una inscripción de este tipo de pase para este socio en esta fecha.',10,1);
         RETURN;
     END
 
-    -- Buscar ID_Actividad_Extra asociado a la tarifa en Pileta
-    INSERT INTO actividades.Pileta VALUES (@IDTarifa)
+    IF NOT EXISTS (SELECT 1 FROM tesoreria.Tarifa_Pileta tf WHERE tf.ID = @ID_Tarifa_Pileta AND tf.Vigente_Hasta >= @Fecha)
+    BEGIN
+        RAISERROR('No se encontró una tarifa vigente con el ID proporcionado.',10,1);
+        RETURN;
+    END
+
+    INSERT INTO actividades.Pileta (ID_Tarifa_Pileta)
+    VALUES (@ID_Tarifa_Pileta);
+
+    SET @ID_Pileta = SCOPE_IDENTITY();
     
     INSERT INTO actividades.Actividad_Extra (Tipo, ID_Pileta)
-    SELECT 'Pileta', ap.ID
-    FROM actividades.Pileta ap
-    WHERE ap.ID_Tarifa_Pileta = @IDTarifa
+    VALUES ('PILETA', @ID_Pileta);
 
-    SELECT @ID_Actividad_Extra = ID
-    FROM actividades.Actividad_Extra AE
-    WHERE Tipo = 'Pileta' AND AE.ID_Pileta = @IDTarifa
+    SET @ID_Actividad_Extra = SCOPE_IDENTITY();
 
-    -- Insertar inscripción
+    SET @FechaEmision = CAST(GETDATE() AS DATE);
+    SET @HoraEmision = CAST(GETDATE() AS TIME)
+
+    EXEC tesoreria.Insert_Factura
+        @FechaEmision,
+        @HoraEmision,
+        @Importe = @ImporteFactura,
+        @ID_Factura = @ID_Factura OUTPUT;
+
     INSERT INTO actividades.Inscripcion (
         Fecha, Tipo, ID_Socio, ID_Actividad_Extra
     )
     VALUES (
-        @Fecha, 'Pileta', @ID_Socio, @ID_Actividad_Extra
+        @Fecha, 'PILETA '+ @TipoPase, @ID_Socio, @ID_Actividad_Extra
     );
 
-    PRINT 'Inscripción realizada con éxito.';
+    RAISERROR('Inscripción realizada con éxito.',10,1)
 END
+GO
+

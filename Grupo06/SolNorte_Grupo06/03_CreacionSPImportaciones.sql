@@ -38,14 +38,16 @@ BEGIN
 	Vigente_Hasta DATE NOT NULL
 	);
 	
-	EXEC('INSERT INTO #TempImport_Actividad (Actividad, Importe, Vigente_Hasta)' +
+	DECLARE @sql NVARCHAR(MAX) = 'INSERT INTO #TempImport_Actividad (Actividad, Importe, Vigente_Hasta)' +
 		'SELECT LTRIM(RTRIM([Actividad])),
 		[Valor por mes],
 		[Vigente hasta]' +
 		'FROM OPENROWSET(''Microsoft.ACE.OLEDB.16.0'','+
 		'''Excel 12.0;Database='+@rutaArch+';HDR=YES'','+
 		'''SELECT * FROM [Tarifas$B2:D8]'');
-	');
+	';
+
+	EXEC sp_executesql @sql;
 
 	UPDATE #TempImport_Actividad
 	SET Actividad = 'Ajedrez'
@@ -129,12 +131,14 @@ BEGIN
 	Vigente_Hasta DATE NOT NULL
 	);
 	
-	EXEC('INSERT INTO #TempImport_Tarifa_Pileta (Descripcion, Rango_Edad, Valor_Socios, Valor_Invitados, Vigente_Hasta)' +
+	DECLARE @sql NVARCHAR(MAX) = 'INSERT INTO #TempImport_Tarifa_Pileta (Descripcion, Rango_Edad, Valor_Socios, Valor_Invitados, Vigente_Hasta)' +
 		'SELECT F1 as Descripcion, F2 as Rango_Edad, F3 as Valor_Socios, F4 as Valor_Invitados, F5 as Vigente_Hasta ' +
 		'FROM OPENROWSET(''Microsoft.ACE.OLEDB.16.0'','+
 		'''Excel 12.0;Database='+@rutaArch+';HDR=NO'','+
 		'''SELECT * FROM [Tarifas$B17:F22]'');
-	');
+	';
+
+	EXEC sp_executesql @sql
 	
 	UPDATE #TempImport_Tarifa_Pileta
 	SET Descripcion = b.DescripcionAnterior
@@ -183,14 +187,16 @@ BEGIN
 	Vigente_Hasta DATE NOT NULL
 	);
 	
-	EXEC('INSERT INTO #TempImport_Tarifa_Cuota (Descripcion, Valor, Vigente_Hasta)' +
+	DECLARE @sql NVARCHAR(MAX) = 'INSERT INTO #TempImport_Tarifa_Cuota (Descripcion, Valor, Vigente_Hasta)' +
 		'SELECT LTRIM(RTRIM([Categoria socio])),
 		[Valor cuota],
 		[Vigente hasta]' +
 		'FROM OPENROWSET(''Microsoft.ACE.OLEDB.16.0'','+
 		'''Excel 12.0;Database='+@rutaArch+';HDR=YES'','+
 		'''SELECT * FROM [Tarifas$B10:D13]'');
-	');
+	';
+
+	EXEC sp_executesql @sql;
 
 	INSERT INTO tesoreria.Tarifa_Categoria (Importe, Vigente_Hasta)
 	SELECT tmp.Valor, tmp.Vigente_Hasta
@@ -244,7 +250,7 @@ BEGIN
 		Profesor VARCHAR(50) NOT NULL
 	);
 	
-	EXEC('INSERT INTO #TempImport_Asiste (Descripcion, Fecha, Asiste, ID_Socio, Profesor)' +
+	DECLARE @sql NVARCHAR(MAX) = 'INSERT INTO #TempImport_Asiste (Descripcion, Fecha, Asiste, ID_Socio, Profesor)' +
 		' SELECT
 		LTRIM(RTRIM([Actividad])),
 		[fecha de asistencia],
@@ -254,7 +260,9 @@ BEGIN
 		' FROM OPENROWSET(''Microsoft.ACE.OLEDB.16.0'','+
 		'''Excel 12.0;Database='+@rutaArch+';HDR=YES'','+
 		'''SELECT * FROM [presentismo_actividades$]'');
-	');
+	';
+
+	exec sp_executesql @sql;
 
 	CREATE TABLE #Datos_Procesados (
 		ID INT PRIMARY KEY,
@@ -801,29 +809,29 @@ BEGIN
 		);
 	END
 
-	EXEC('
+	DECLARE @sql NVARCHAR(MAX) = '
 	BULK INSERT ##TempImport_lluvia
 	FROM ''' + @RutaArch1 + '''
 	WITH (
-		DATAFILETYPE = ''char'',
 		FIRSTROW = 5,
 		FIELDTERMINATOR = '','',
 		ROWTERMINATOR = ''0x0a'',
-		CODEPAGE = ''65001'',
-		TABLOCK
-	);');
+		CODEPAGE = ''65001''
+	);'
 
-	EXEC('
+	EXEC sp_executesql @sql;
+
+	SET @sql = '
 	BULK INSERT ##TempImport_lluvia
 	FROM ''' + @RutaArch2 + '''
 	WITH (
-		DATAFILETYPE = ''char'',
 		FIRSTROW = 5,
 		FIELDTERMINATOR = '','',
 		ROWTERMINATOR = ''0x0a'',
-		CODEPAGE = ''65001'',
-		TABLOCK
-	);');
+		CODEPAGE = ''65001''
+	);'
+
+	EXEC sp_executesql @sql;
 
 
 	WITH Duplicados AS (

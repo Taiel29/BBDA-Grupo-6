@@ -30,14 +30,6 @@ BEGIN
 END
 GO
 
-IF SUSER_ID(N'login_Administrativo_Cobranza') IS NULL
-BEGIN
-    CREATE LOGIN login_Administrativo_Cobranza
-		WITH PASSWORD = 'ManejoCobranzas#001',
-		DEFAULT_DATABASE = Com2900G06;
-END
-GO
-
 IF SUSER_ID(N'login_Administrativo_Morosidad') IS NULL
 BEGIN
     CREATE LOGIN login_Administrativo_Morosidad
@@ -203,7 +195,7 @@ GRANT EXECUTE ON SCHEMA::reportes TO rol_Administrativo_Morosidad;
 
 --Permisos para el administrativo de facturacion
 GRANT SELECT ON SCHEMA::tesoreria TO rol_Administrativo_Facturacion;
-GRANT UPDATE ON SCHEMA::tesoreria TO rol_Administrativo_Cobranza;
+GRANT UPDATE ON SCHEMA::tesoreria TO rol_Administrativo_Facturacion;
 GRANT SELECT ON SCHEMA::actividades TO rol_Administrativo_Facturacion;
 GRANT SELECT ON socios.Socio TO rol_Administrativo_Facturacion;
 GRANT SELECT ON socios.Estado_Socio TO rol_Administrativo_Facturacion;

@@ -92,13 +92,47 @@ EXEC actividades.Insert_Actividad @Descripcion = '', @IDTarifa = 3
 Select * FROM actividades.Actividad
 -------------------------------------
 
+--====tesoreria.Insert_Tesoreria====--
+
+--Se espera mensaje informando que la factura fue generada.
+DECLARE @FechaActual DATE = CAST(GETDATE() AS DATE);
+DECLARE @HoraActual TIME = CAST(GETDATE() AS TIME);
+DECLARE @ID_Factura INT
+
+EXEC tesoreria.Insert_Factura
+    @FechaEmision = @FechaActual,
+    @HoraEmision = @HoraActual,
+    @Importe = 1500.75,
+    @ID_Factura = @ID_Factura OUTPUT
+PRINT ('ID de la factura generada: ' + CAST(@ID_Factura AS VARCHAR))
+
+SELECT * FROM tesoreria.Factura ORDER BY ID desc
+--Se espera que no se pueda insertar la factura si el importe es negativo
+------------------------------------
+
+--====actividades.Insert_Inscripcion_Pileta====--
+
+-- Paso a paso para generar una inscripción a la pileta
+
+--Ejecutar Insert_Inscripcion_Pileta con el Nro Socio que se va a inscribir, la Tarifa, y la fecha en la que se inscribió
+-- Tarifa 1: Pase diario para adultos socios
+-- Tarifa 2: Pase diario para menores de 12 socios
+-- Tarifa 3: Pase temporada adultos socios
+-- Tarifa 4: Pase temporada menores de 12 socios
+-- Tarifa 5: Pase mensual adultos socios
+-- Tarifa 6: Pase mensual menores de 12 años socios
 EXEC actividades.Insert_Inscripcion_Pileta
-    @NroSocio = 'SN-4028',
-    @IDTarifa = 1,
+    @NroSocio = 'SN-4150',
+    @TipoPase = 'Temporada',
     @Fecha = '2024-06-24';
 
-SELECT * FROM socios.Socio;
+SELECT * FROM socios.Socio ORDER BY Fecha_Nacimiento;
 SELECT * FROM tesoreria.Tarifa_Pileta;
 SELECT * FROM actividades.Pileta;
 SELECT * FROM actividades.Inscripcion;
 SELECT * FROM actividades.Actividad_Extra;
+-- Se debe crear una inscripción con
+
+DELETE FROM actividades.Pileta
+DELETE FROM actividades.Inscripcion
+DELETE FROM actividades.Actividad_Extra
