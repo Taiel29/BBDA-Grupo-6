@@ -1,7 +1,7 @@
 /*En este script se cargan los datos iniciales en el sistema, tanto como los que se reciben por archivo como
 aquellos que no se reciben pero se saben sus valores, tales como los medios de pago que maneja el club*/
 
---Fecha de entrega: 24/06/2025
+--Fecha de entrega: 1/07/2025
 --Comisión: 2900
 --Grupo: 6
 --Base de datos Aplicada

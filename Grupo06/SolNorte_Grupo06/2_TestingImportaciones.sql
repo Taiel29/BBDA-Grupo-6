@@ -1,6 +1,6 @@
 --En este script se prueba la funcionalidad de los scripts de importación a tablas
 
---Fecha de entrega: 24/06/2025
+--Fecha de entrega: 1/07/2025
 --Comisión: 2900
 --Grupo: 6
 --Base de datos Aplicada

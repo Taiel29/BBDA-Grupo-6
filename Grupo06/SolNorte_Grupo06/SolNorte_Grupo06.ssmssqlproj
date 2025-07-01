@@ -122,8 +122,8 @@
           <FullPath>3_TestingReportes.sql</FullPath>
         </FileNode>
         <FileNode Name="4_TestingEncriptacion.sql">
-          <AssociatedConnectionMoniker />
-          <AssociatedConnSrvName />
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:TAIELPC:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>TAIELPC</AssociatedConnSrvName>
           <AssociatedConnUserName />
           <FullPath>4_TestingEncriptacion.sql</FullPath>
         </FileNode>

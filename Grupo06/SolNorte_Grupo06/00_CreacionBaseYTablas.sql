@@ -1,6 +1,6 @@
 --En este script se realiza la creación de la base de datos y las tablas contenidas en esta junto con sus restricciones
 
---Fecha de entrega: 24/06/2025
+--Fecha de entrega: 1/07/2025
 --Comisión: 2900
 --Grupo: 6
 --Base de datos Aplicada

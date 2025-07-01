@@ -1,6 +1,6 @@
 --En este script se realiza la creación de los Store Procedure para manejar la verificación, inserción, y borrado de tablas
 
---Fecha de entrega: 24/06/2025
+--Fecha de entrega: 1/07/2025
 --Comisión: 2900
 --Grupo: 6
 --Base de datos Aplicada
