@@ -142,9 +142,9 @@ SELECT * FROM tesoreria.Factura ORDER BY ID desc
 SELECT * FROM socios.Socio ORDER BY Nro_Socio; --Para ver qué Nro_Socios se pueden usar
 
 EXEC actividades.Insert_Inscripcion_Pileta
-    @NroSocio = 'SN-4010',
+    @NroSocio = 'SN-4006',
     @TipoPase = 'Diario',
-    @Fecha = '2024-06-24',
+    @Fecha = '2024-01-02',
     @Hora = '';
 
 SELECT * FROM tesoreria.Tarifa_Pileta;
@@ -181,7 +181,7 @@ EXEC tesoreria.Insert_Pago
     @Hora = '',
     @ID_Medio_De_Pago = 3,
     @ID_Pago = 123456789015,
-    @ID_Factura = 1006,
+    @ID_Factura = 721,
     @ID_Pago_Creado = @ID_Pago_Creado OUTPUT
 
 PRINT ('ID del pago creado: ' + CAST(@ID_Pago_Creado AS VARCHAR))
@@ -204,9 +204,26 @@ SELECT TOP 100 * FROM tesoreria.Factura ORDER BY ID desc
 INSERT INTO socios.Socio (DNI, Apellido, Nombre)
 VALUES ('31091218', 'Gallardo', 'Marcelo')
 SELECT * FROM socios.Socio ORDER BY ID DESC
-SELECT * FROM socios.Cuenta ORDER BY ID DESC
+SELECT * FROM socios.Cuenta ORDER BY ID_Socio DESC
+
 EXEC socios.Insert_Cuentas
+
 SELECT * FROM socios.Cuenta ORDER BY ID DESC
+-- Se espera:
+-- Nuevas filas en la tabla socios.Cuenta con saldo 0 para los socios que no poseían cuentas
+-- Sin cambios para los socios que ya poseian cuentas
+------------------------------
+--====Insert_Tipo_Reembolso====--
+
+EXEC tesoreria.Insert_Tipo_Reembolso
+    @Descripcion = 'Por cancelación',
+    @Porcentaje = 100
+GO
+SELECT * FROM tesoreria.Tipo_Reembolso
+-- Se espera:
+-- mensaje diciendo que el tipo de reembolso fue creado correctamente
+-- Rechazar las descripciones vacías
+-- Rechazar los porcentajes iguales o menores a 0
 GO
 
 --Se crean cuotas junto con sus facturas y se les crea pagos retrasados (un mes). Esto para testear el funcionamiento del reporte de morosidad
@@ -329,3 +346,29 @@ EXEC tesoreria.Insert_Pago
     @ID_Factura = @ID_Factura,
     @ID_Pago_Creado = @ID_Pago_Creado OUTPUT
 GO
+--------------------------------
+--====Insert_Reembolso====--
+
+EXEC tesoreria.Insert_Reembolsos
+    @IDCuenta = 1,
+    @IDPago = 2,
+    @IDTipoReembolso = 2
+
+SELECT TOP 100 * FROM socios.Cuenta
+SELECT TOP 100 * FROM tesoreria.Pago ORDER BY ID DESC
+SELECT TOP 100 * FROM tesoreria.Factura ORDER BY ID DESC
+SELECT * FROM tesoreria.Tipo_Reembolso
+SELECT * FROM tesoreria.Reembolso
+
+-- Se espera:
+-- Mensaje diciendo que el reembolso fue creado correctamente
+-- Rechazar los ID que no correspondan a ninguna fila de sus respectivas tablas
+-- Saldo actualizado en la cuenta del socio
+
+--------------------------------
+--====Generar_Reembolsos_Por_Lluvia====--
+EXEC tesoreria.Generar_Reembolsos_Por_Lluvia;
+
+SELECT * FROM ##TempLluviaDiaria
+SELECT * FROM tesoreria.Reembolso
+SELECT TOP 100 * FROM socios.Cuenta ORDER BY ID_SOCIO ASC

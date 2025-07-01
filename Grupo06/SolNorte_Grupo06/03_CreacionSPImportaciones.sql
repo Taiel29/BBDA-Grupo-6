@@ -154,8 +154,15 @@ BEGIN
 		Descripcion + ' ' + Rango_Edad + ' Socio' AS Descripcion,
 		Valor_Socios,
 		Vigente_Hasta
-	FROM #TempImport_Tarifa_Pileta
+	FROM #TempImport_Tarifa_Pileta t
 	WHERE Valor_Socios IS NOT NULL
+	AND NOT EXISTS (
+		SELECT 1 FROM tesoreria.Tarifa_Pileta p
+		WHERE 
+			p.Descripcion = t.Descripcion + ' ' + t.Rango_Edad + ' Socio'
+			AND p.Importe = t.Valor_Socios
+			AND p.Vigente_Hasta = t.Vigente_Hasta
+	)
 
 	UNION ALL
 
@@ -163,8 +170,15 @@ BEGIN
 		Descripcion + ' ' + Rango_Edad + ' Invitado' AS Descripcion,
 		Valor_Invitados,
 		Vigente_Hasta
-	FROM #TempImport_Tarifa_Pileta
-	WHERE Valor_Invitados IS NOT NULL;
+	FROM #TempImport_Tarifa_Pileta t
+	WHERE Valor_Invitados IS NOT NULL
+	AND NOT EXISTS (
+		SELECT 1 FROM tesoreria.Tarifa_Pileta p
+		WHERE 
+			p.Descripcion = t.Descripcion + ' ' + t.Rango_Edad + ' Invitado'
+			AND p.Importe = t.Valor_Invitados
+			AND p.Vigente_Hasta = t.Vigente_Hasta
+	);
 
 	RAISERROR('Tarifas de pileta importadas',10,1)
 
@@ -809,6 +823,10 @@ BEGIN
 		Viento Numeric (4,1)
 		);
 	END
+	ELSE
+    BEGIN
+        TRUNCATE TABLE ##TempImport_lluvia;
+    END
 
 	DECLARE @sql NVARCHAR(MAX) = '
 	BULK INSERT ##TempImport_lluvia
@@ -834,17 +852,28 @@ BEGIN
 
 	EXEC sp_executesql @sql;
 
+	DELETE FROM ##TempImport_lluvia WHERE Lluvia = 0;
 
-	WITH Duplicados AS (
-		SELECT *,
-			   ROW_NUMBER() OVER (
-				   PARTITION BY Tiempo, Lluvia
-				   ORDER BY Tiempo, Lluvia
-			   ) AS rn
-		FROM ##TempImport_lluvia
-	)
-	DELETE FROM Duplicados WHERE rn > 1 OR Duplicados.Lluvia = 0;
-	
+	IF OBJECT_ID('tempdb..##TempLluviaDiaria') IS NULL
+    BEGIN
+        CREATE TABLE ##TempLluviaDiaria (
+            Fecha DATE PRIMARY KEY,
+            TotalLluvia NUMERIC(10,2)
+        );
+    END
+    ELSE
+    BEGIN
+        TRUNCATE TABLE ##TempLluviaDiaria;
+    END
+
+	INSERT INTO ##TempLluviaDiaria (Fecha, TotalLluvia)
+    SELECT 
+        TRY_CONVERT(DATE, LEFT(Tiempo, 10)) AS Fecha,  -- extraigo solo yyyy-mm-dd
+        SUM(Lluvia) AS TotalLluvia
+    FROM ##TempImport_lluvia
+    WHERE TRY_CONVERT(DATE, LEFT(Tiempo, 10)) IS NOT NULL
+    GROUP BY TRY_CONVERT(DATE, LEFT(Tiempo, 10));
+
 	RAISERROR('Lluvias del 2024 y 2025 importadas',10,1)
 
 END

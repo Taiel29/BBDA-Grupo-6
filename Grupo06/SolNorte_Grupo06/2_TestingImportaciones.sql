@@ -113,4 +113,4 @@ EXEC importaciones.Importar_Lluvia
 	@RutaArch2 = 'C:\Users\Public\Documents\open-meteo-buenosaires_2025.csv'
 GO
 
-SELECT * FROM ##TempImport_lluvia
+SELECT * FROM ##TempLluviaDiaria

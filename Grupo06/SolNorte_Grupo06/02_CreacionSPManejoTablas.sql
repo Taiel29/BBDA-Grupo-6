@@ -444,10 +444,10 @@ BEGIN
         @ID_Factura = @ID_Factura OUTPUT;
 
     INSERT INTO actividades.Inscripcion (
-        Fecha, Tipo, ID_Socio, ID_Actividad_Extra
+        Fecha, Tipo, ID_Socio, ID_Actividad_Extra, ID_Factura
     )
     VALUES (
-        @Fecha, 'PILETA '+ @TipoPase, @ID_Socio, @ID_Actividad_Extra
+        @Fecha, 'PILETA '+ @TipoPase, @ID_Socio, @ID_Actividad_Extra, @ID_Factura
     );
 
     RAISERROR('Inscripción realizada con éxito.',10,1)
@@ -552,3 +552,144 @@ BEGIN
     RAISERROR('Se les ha creado una cuenta a los socios que no poseían', 10, 1);
 END
 GO
+
+----------------------
+
+CREATE OR ALTER PROCEDURE tesoreria.Insert_Tipo_Reembolso
+    @Descripcion VARCHAR(100),
+    @Porcentaje NUMERIC(5,2)
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SET @Descripcion = UPPER(LEFT(LOWER(@Descripcion), 1)) + SUBSTRING(LOWER(@Descripcion), 2, LEN(@Descripcion) - 1) 
+
+    IF (@Porcentaje > 0)
+    BEGIN
+        IF (@Descripcion IS NULL OR @Descripcion = '')
+            RAISERROR('Se debe proporcionar una descripcion no vacía', 10, 1);
+        ELSE
+        BEGIN
+            IF NOT EXISTS (SELECT 1
+                FROM tesoreria.Tipo_Reembolso
+                WHERE Descripcion = @Descripcion)
+            BEGIN
+                INSERT INTO tesoreria.Tipo_Reembolso(Descripcion, Porcentaje)
+                VALUES (@Descripcion, @Porcentaje);
+                RAISERROR('Nuevo tipo de reembolso registrado.', 10, 1);
+            END
+            ELSE
+                RAISERROR('La descripcion proporcionada ya está en uso', 10, 1);
+        END
+    END
+    ELSE
+        RAISERROR('Se debe proporcionar un porcentaje mayor a 0', 10, 1);
+END
+GO
+
+---------------------------
+
+CREATE or ALTER PROCEDURE tesoreria.Insert_Reembolsos
+    @IDCuenta INT,
+    @IDPago INT,
+    @IDTipoReembolso INT
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    IF NOT EXISTS (Select 1 FROM socios.Cuenta WHERE ID = @IDCuenta)
+    BEGIN
+        RAISERROR('No existe cuenta con el ID Proporcionado', 10, 1);
+        RETURN;
+    END
+
+    IF NOT EXISTS (Select 1 FROM tesoreria.Pago WHERE ID = @IDPago)
+    BEGIN
+        RAISERROR('No existe un pago con el ID Proporcionado', 10, 1);
+        RETURN;
+    END
+
+    IF NOT EXISTS (Select 1 FROM tesoreria.Tipo_Reembolso WHERE ID = @IDTipoReembolso)
+    BEGIN
+        RAISERROR('No existe un tipo de reembolso con el ID Proporcionado', 10, 1);
+        RETURN;
+    END
+
+    IF EXISTS (Select 1 FROM tesoreria.Reembolso WHERE ID_Pago = @IDPago)
+    BEGIN
+        RAISERROR('El pago asociado al ID proporcionado ya fue reembolsado', 10, 1);
+        RETURN;
+    END
+
+    UPDATE socios.Cuenta
+    SET Saldo += tf.Importe * tr.Porcentaje/100
+    FROM socios.Cuenta sc
+    JOIN tesoreria.Pago tp ON tp.ID=@IDPago
+    JOIN tesoreria.Factura tf ON tf.ID_Pago = @IDPago
+    JOIN tesoreria.Tipo_Reembolso tr on tr.ID = @IDTipoReembolso
+    WHERE sc.ID = @IDCuenta
+
+    INSERT INTO tesoreria.Reembolso (ID_Cuenta, ID_Pago, ID_Tipo)
+    VALUES (@IDCuenta, @IDPago, @IDTipoReembolso);
+
+    RAISERROR('Reembolso registrado y saldo actualizado', 10, 1);
+
+END
+GO
+
+----------------------------
+
+CREATE OR ALTER PROCEDURE tesoreria.Generar_Reembolsos_Por_Lluvia
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    INSERT INTO tesoreria.Reembolso (ID_Cuenta, ID_Pago, ID_Tipo)
+    SELECT
+        c.ID AS ID_Cuenta,
+        f.ID_Pago,
+        1 AS ID_Tipo
+    FROM actividades.Inscripcion i
+    INNER JOIN tesoreria.Factura f
+        ON f.ID = i.ID_Factura
+    INNER JOIN tesoreria.Pago p
+        ON p.ID = f.ID_Pago
+    INNER JOIN socios.Cuenta c
+        ON c.ID_Socio = i.ID_Socio
+    INNER JOIN ##TempLluviaDiaria lluv
+        ON (
+            (
+                UPPER(i.Tipo) LIKE '%DIARIO%' AND
+                CONVERT(DATE, lluv.Fecha) = i.Fecha
+            )
+            OR (
+                UPPER(i.Tipo) LIKE '%MENSUAL%' AND
+                CONVERT(DATE, lluv.Fecha) BETWEEN i.Fecha AND DATEADD(DAY,30,i.Fecha)
+            )
+            OR (
+                UPPER(i.Tipo) LIKE '%TEMPORADA%' AND
+                CONVERT(DATE, lluv.Fecha) BETWEEN i.Fecha AND DATEADD(DAY,90,i.Fecha)
+            )
+        )
+    WHERE
+        lluv.TotalLluvia > 0
+        AND f.ID_Pago IS NOT NULL
+        AND NOT EXISTS (
+            SELECT 1
+            FROM tesoreria.Reembolso r
+            WHERE r.ID_Pago = f.ID_Pago
+        );
+
+    UPDATE c
+    SET c.Saldo += f.Importe * 0.6
+    FROM socios.Cuenta c
+    INNER JOIN tesoreria.Reembolso r
+        ON r.ID_Cuenta = c.ID
+    INNER JOIN tesoreria.Pago p
+        ON p.ID = r.ID_Pago
+    INNER JOIN tesoreria.Factura f
+        ON f.ID_Pago = p.ID
+    WHERE r.ID_Tipo = 1;
+
+    PRINT 'Reembolsos por lluvia procesados correctamente.';
+END;
