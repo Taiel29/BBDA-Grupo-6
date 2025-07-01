@@ -9,6 +9,32 @@
 --Rojas Taiel Ezequiel - DNI: 46183434
 --Cropalati Franco Nicolas - DNI: 43404823
 
+/*Reporte 2
+Reporte acumulado mensual de ingresos por actividad deportiva al momento en que se saca
+el reporte tomando como inicio enero.*/
+
+CREATE OR ALTER PROCEDURE sp_IngresosMensualesPorActividad
+AS
+BEGIN
+    SELECT 
+        DATENAME(MONTH, asist.Fecha) AS Mes,
+        YEAR(asist.Fecha) AS Anio,
+        act.Descripcion AS Actividad,
+        SUM(tarifa.Monto) AS Ingreso_Total
+    FROM actividades.Socio_Asiste_Clase asist
+    JOIN actividades.Clase clase ON asist.ID_Clase = clase.ID
+    JOIN actividades.Actividad act ON clase.ID_Actividad = act.ID
+    JOIN tesoreria.Tarifa_Actividad tarifa ON act.ID_Tarifa = tarifa.ID
+    WHERE asist.Asiste = 'P'
+        AND YEAR(asist.Fecha) = YEAR(GETDATE())
+        AND MONTH(asist.Fecha) <= MONTH(GETDATE())
+    GROUP BY 
+        DATENAME(MONTH, asist.Fecha), 
+        YEAR(asist.Fecha), 
+        act.Descripcion
+    ORDER BY Anio, MONTH(asist.Fecha), act.Descripcion;
+END;
+
 /* REPORTE 3
 Reporte de la cantidad de socios que han realizado alguna actividad de forma alternada
 (inasistencias) por categoría de socios y actividad, ordenado según cantidad de inasistencias
