@@ -32,6 +32,10 @@ EXEC tesoreria.Insert_Estado_Factura @Descripcion = 'GeNerAda'
 GO
 WAITFOR DELAY '00:00:02';
 
+EXEC tesoreria.Insert_Estado_Factura @Descripcion = 'Pagada con retraso'
+GO
+WAITFOR DELAY '00:00:02';
+
 EXEC importaciones.Import_Actividades
     @rutaArch = 'C:\Users\Public\Documents\Datos socios.xlsx'
 GO
@@ -71,4 +75,46 @@ WAITFOR DELAY '00:00:02';
 EXEC importaciones.Importar_Lluvia
 	@RutaArch1 = 'C:\Users\Public\Documents\open-meteo-buenosaires_2024.csv',
 	@RutaArch2 = 'C:\Users\Public\Documents\open-meteo-buenosaires_2025.csv'
+GO
+
+EXEC tesoreria.Insert_Cuota
+	@Mes = 1,
+	@Socio = 20,
+	@Importe = 5000
+GO
+
+EXEC tesoreria.Insert_Cuota
+	@Mes = 2,
+	@Socio = 20, 
+	@Importe = 5000
+GO
+
+EXEC tesoreria.Insert_Cuota
+	@Mes = 3,
+	@Socio = 20,
+	@Importe = 5000
+GO
+
+EXEC tesoreria.Insert_Cuota
+	@Mes = 4,
+	@Socio = 20,
+	@Importe = 5000
+GO
+
+EXEC tesoreria.Insert_Cuota
+	@Mes = 1,
+	@Socio = 25,
+	@Importe = 5000
+GO
+
+EXEC tesoreria.Insert_Cuota
+	@Mes = 2,
+	@Socio = 25,
+	@Importe = 5000
+GO
+
+EXEC tesoreria.Insert_Cuota
+	@Mes = 3,
+	@Socio = 25,
+	@Importe = 5000
 GO

@@ -14,6 +14,11 @@
 USE Com2900G06
 GO
 
+-- Reporte 1
+EXEC reportes.MorososRecurrentes
+	@FechaDesde = '2025-01-01',
+	@FechaHasta = '2025-04-01'
+
 -- Reporte 2
 EXEC reportes.IngresosMensualesPorActividad
 

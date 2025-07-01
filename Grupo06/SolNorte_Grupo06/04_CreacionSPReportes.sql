@@ -12,6 +12,46 @@
 USE Com2900G06
 GO
 
+/*Reporte 1
+Reporte de los socios morosos, que hayan incumplido en más de dos oportunidades dado un
+rango de fechas a ingresar. El reporte debe contener los siguientes datos:
+Nombre del reporte: Morosos Recurrentes
+Período: rango de fechas
+Nro de socio
+Nombre y apellido.
+Mes incumplido
+Ordenados de Mayor a menor por ranking de morosidad
+El mismo debe ser desarrollado utilizando Windows Function.*/
+
+CREATE OR ALTER PROCEDURE reportes.MorososRecurrentes
+@FechaDesde DATE,
+@FechaHasta DATE
+AS
+BEGIN
+	WITH Incumplimientos AS(
+		SELECT 
+			s.Nro_Socio, 
+			s.Nombre, 
+			s.Apellido, 
+			COUNT(DISTINCT c.Mes) AS CantIncumplimientos,
+			STRING_AGG(CAST(c.Mes AS VARCHAR), ', ') AS Meses_Incumplidos
+		FROM tesoreria.Factura f
+		JOIN tesoreria.Cuota c ON c.ID_Factura = f.ID
+		JOIN socios.Socio s ON c.ID_Socio = s.ID
+		JOIN tesoreria.Estado_Factura ef ON f.ID_Estado = ef.ID
+		WHERE 
+			f.ID_Pago IS NULL
+			AND f.Fecha_Emision BETWEEN @FechaDesde AND @FechaHasta
+			AND ef.Descripcion = 'PAGADA CON RETRASO'
+			AND ef.ID = f.ID_Estado
+		GROUP BY 
+			s.Nro_Socio, s.Nombre, s.Apellido
+	) SELECT Nro_Socio, Nombre, Apellido, Meses_Incumplidos, RANK() OVER (ORDER BY CantIncumplimientos DESC) AS RANKING 
+	  FROM Incumplimientos
+	  WHERE CantIncumplimientos > 2
+END
+GO
+
 /*Reporte 2
 Reporte acumulado mensual de ingresos por actividad deportiva al momento en que se saca
 el reporte tomando como inicio enero.*/

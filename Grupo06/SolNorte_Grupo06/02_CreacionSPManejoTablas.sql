@@ -252,7 +252,86 @@ BEGIN
     RAISERROR ('Factura insertada con éxito.',10,1);
 END;
 GO
+
 ----------------------------------
+CREATE OR ALTER PROCEDURE tesoreria.Insert_Cuota
+@Mes INT,
+@Socio INT,
+@Importe DECIMAL(10,2)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF (@Mes < 1 OR @Mes > 12)
+    BEGIN
+        RAISERROR('El mes tiene que estar entre 1 y 12.', 10, 1);
+        RETURN;
+    END
+
+	DECLARE @SocioExiste INT;
+	DECLARE @FechaInicio DATE;
+
+	SET @SocioExiste = (SELECT 1 FROM socios.Socio WHERE ID = @Socio);
+
+	IF(@SocioExiste != 1)
+	BEGIN
+		RAISERROR('El socio ingresado no existe', 10, 1);
+        RETURN;
+	END
+
+	SET @FechaInicio = DATEFROMPARTS(YEAR(GETDATE()), @Mes, 1);
+
+	INSERT INTO tesoreria.Cuota (
+		Fecha_Inicio,
+		Fecha_Final,
+		Mes,
+		ID_Socio,
+		ID_Factura
+	)
+	VALUES (
+		@FechaInicio,
+		EOMONTH(@FechaInicio),
+		@Mes,
+		@Socio,
+		NULL
+	)
+
+	DECLARE @FechaEmision DATE;
+	SET @FechaEmision = DATEFROMPARTS(YEAR(GETDATE()), MONTH(@FechaInicio), DAY(@FechaInicio));
+
+    INSERT INTO tesoreria.Factura (
+        PDV,
+        Numero,
+        Fecha_Emision,
+        Hora_Emision,
+        Importe,
+        Fecha_Primer_Vencimiento,
+        Fecha_Segundo_Vencimiento,
+        ID_Recargo,
+        ID_Estado,
+        ID_Pago
+    )
+    VALUES (
+        1,              
+        1,              
+        @FechaEmision,
+        NULL,
+        @Importe,
+        DATEADD(DAY, 5, @FechaEmision),
+        DATEADD(DAY, 10, @FechaEmision),
+        NULL,              
+        3,                
+        NULL              
+    );
+
+	UPDATE tesoreria.Cuota SET ID_Factura = (SELECT MAX(ID) FROM tesoreria.Factura)
+	WHERE ID = (SELECT MAX(ID) FROM tesoreria.Cuota);
+
+    RAISERROR ('Cuota con factura insertada con éxito.',10,1);
+END;
+GO
+----------------------------------
+
 CREATE OR ALTER PROCEDURE actividades.Insert_Inscripcion_Pileta
     @NroSocio CHAR(8),
     @TipoPase VARCHAR(50),
@@ -420,12 +499,23 @@ BEGIN
 
     SET @ID_Pago_Creado = SCOPE_IDENTITY();
 
-    UPDATE tesoreria.Factura
-    SET ID_Estado = 1,
-    ID_Pago = @ID_Pago_Creado
-    WHERE ID = @ID_Factura
+	IF EXISTS(SELECT 1 FROM tesoreria.Factura WHERE ID = @ID_Factura AND @Fecha > Fecha_Segundo_Vencimiento)
+	BEGIN
+		UPDATE tesoreria.Factura
+		SET ID_Estado = 3,
+		ID_Pago = @ID_Pago_Creado
+		WHERE ID = @ID_Factura
+	END
+	ELSE
+	BEGIN
+		UPDATE tesoreria.Factura
+		SET ID_Estado = 1,
+		ID_Pago = @ID_Pago_Creado
+		WHERE ID = @ID_Factura
+	END
+    
 
-    IF EXISTS (SELECT 1 FROM tesoreria.Factura WHERE ID = @ID_Factura AND Fecha_Primer_Vencimiento <= @Fecha)
+    IF EXISTS (SELECT 1 FROM tesoreria.Factura WHERE ID = @ID_Factura AND Fecha_Primer_Vencimiento <= @Fecha AND @Fecha <= Fecha_Segundo_Vencimiento)
     BEGIN
         DECLARE @IDRecargo INT
 
