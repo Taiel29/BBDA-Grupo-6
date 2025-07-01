@@ -14,21 +14,20 @@ USE Com2900G06
 GO
 
 EXEC tesoreria.Insert_Medio_Pago @Descripcion = 'TaRJeta'
-GO
-WAITFOR DELAY '00:00:00.200';
 EXEC tesoreria.Insert_Medio_Pago @Descripcion = 'TRANSFERENCIA'
-GO
-WAITFOR DELAY '00:00:00.200';
 EXEC tesoreria.Insert_Medio_Pago @Descripcion = 'sucursal de pago'
-GO
-WAITFOR DELAY '00:00:00.200';
 EXEC tesoreria.Insert_Medio_Pago @Descripcion = 'Debito AUTOMÁTICO'
 GO
-WAITFOR DELAY '00:00:00.200';
+
+EXEC tesoreria.Insert_Recargo
+    @DiasDesdeVencimiento = 5,
+    @Porcentaje = 10
+GO
 
 EXEC tesoreria.Insert_Estado_Factura @Descripcion = 'PAgADA'
 GO
 WAITFOR DELAY '00:00:00.200';
+
 EXEC tesoreria.Insert_Estado_Factura @Descripcion = 'GeNerAda'
 GO
 WAITFOR DELAY '00:00:02';

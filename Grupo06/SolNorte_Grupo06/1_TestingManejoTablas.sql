@@ -12,6 +12,26 @@
 USE Com2900G06
 GO
 
+--====Insertar Recargo de factura====--
+
+--Se espera mensaje informando que el medio de pago se insertó.
+--El medio de pago insertado estará en mayusculas
+--Al ejecutar una segunda vez, se muestra que ya hay un recargo para esa cantidad de días
+EXEC tesoreria.Insert_Recargo
+    @DiasDesdeVencimiento = 2,
+    @Porcentaje = 10
+SELECT * FROM tesoreria.Recargo
+--No se aceptan porcentajes iguales o menores a 0
+EXEC tesoreria.Insert_Recargo
+    @DiasDesdeVencimiento = 2,
+    @Porcentaje = -1
+SELECT * FROM tesoreria.Recargo
+--No se aceptan días menores a 0
+EXEC tesoreria.Insert_Recargo
+    @DiasDesdeVencimiento = -1,
+    @Porcentaje = 10
+SELECT * FROM tesoreria.Recargo
+
 --====Insertar Medio de pago====--
 
 --Se espera mensaje informando que el medio de pago se insertó.
@@ -94,7 +114,7 @@ Select * FROM actividades.Actividad
 
 --====tesoreria.Insert_Tesoreria====--
 
---Se espera mensaje informando que la factura fue generada.
+--Se espera mensaje informando que la factura fue insertada con éxito.
 DECLARE @FechaActual DATE = CAST(GETDATE() AS DATE);
 DECLARE @HoraActual TIME = CAST(GETDATE() AS TIME);
 DECLARE @ID_Factura INT
@@ -107,32 +127,84 @@ EXEC tesoreria.Insert_Factura
 PRINT ('ID de la factura generada: ' + CAST(@ID_Factura AS VARCHAR))
 
 SELECT * FROM tesoreria.Factura ORDER BY ID desc
---Se espera que no se pueda insertar la factura si el importe es negativo
+-- Se espera:
+-- Rechazar las fechas de emisión vacías
+-- Hora de emisión en 0 si no se especifica
+-- Rechazar importes negativos
+-- Que se genera una factura con la tarifa según si el socio es mayor o menor de 12 años, y el tipo de pase.
 ------------------------------------
 
 --====actividades.Insert_Inscripcion_Pileta====--
 
--- Paso a paso para generar una inscripción a la pileta
+-- Generar una inscripción a la pileta declarando si se tiene pase Diario, Mensual, o de Temporada
+-- Generar una factura con la tarifa correspondiente al tipo de pase
 
---Ejecutar Insert_Inscripcion_Pileta con el Nro Socio que se va a inscribir, la Tarifa, y la fecha en la que se inscribió
--- Tarifa 1: Pase diario para adultos socios
--- Tarifa 2: Pase diario para menores de 12 socios
--- Tarifa 3: Pase temporada adultos socios
--- Tarifa 4: Pase temporada menores de 12 socios
--- Tarifa 5: Pase mensual adultos socios
--- Tarifa 6: Pase mensual menores de 12 años socios
+SELECT * FROM socios.Socio ORDER BY Nro_Socio; --Para ver qué Nro_Socios se pueden usar
+
 EXEC actividades.Insert_Inscripcion_Pileta
-    @NroSocio = 'SN-4150',
-    @TipoPase = 'Temporada',
-    @Fecha = '2024-06-24';
+    @NroSocio = 'SN-4010',
+    @TipoPase = 'Diario',
+    @Fecha = '2024-06-24',
+    @Hora = '';
 
-SELECT * FROM socios.Socio ORDER BY Fecha_Nacimiento;
 SELECT * FROM tesoreria.Tarifa_Pileta;
 SELECT * FROM actividades.Pileta;
 SELECT * FROM actividades.Inscripcion;
 SELECT * FROM actividades.Actividad_Extra;
--- Se debe crear una inscripción con
+SELECT TOP 100 * FROM tesoreria.Factura ORDER BY ID desc
 
-DELETE FROM actividades.Pileta
-DELETE FROM actividades.Inscripcion
-DELETE FROM actividades.Actividad_Extra
+-- Se espera:
+-- Rechazar los tipos de pase que no sean Mensual, Diario, o Temporada
+-- Rechazar los números de socio invalidos
+-- Hora de emisión en 0 en la factura si no se especifica
+-- Que se genere una factura con la tarifa según si el socio es mayor o menor de 12 años, y el tipo de pase.
+
+
+-- Nota: La factura estará impaga, para pagarla se utiliza el sp "Insert_Pago", habilitando de esta forma el reembolso por lluvia
+-------------------------------------
+
+--====tesoreria.Insert_Pago====--
+
+-- Se espera mensaje informando que la factura fue insertada con éxito.
+-- Referencia de los ID de medios de pago:
+-- Medio de pago 1: Tarjeta
+-- Medio de pago 2: Transferencia
+-- Medio de pago 3: Sucursal de Pago
+-- Medio de pago 4: Debito automático
+
+DECLARE @Fecha DATE = CAST(GETDATE() AS DATE);
+DECLARE @Hora TIME = CAST(GETDATE() AS TIME);
+DECLARE @ID_Pago_Creado INT
+
+EXEC tesoreria.Insert_Pago
+    @Fecha = @Fecha,
+    @Hora = '',
+    @ID_Medio_De_Pago = 3,
+    @ID_Pago = 123456789015,
+    @ID_Factura = 1006,
+    @ID_Pago_Creado = @ID_Pago_Creado OUTPUT
+
+PRINT ('ID del pago creado: ' + CAST(@ID_Pago_Creado AS VARCHAR))
+
+SELECT TOP 100 * FROM tesoreria.Pago ORDER BY ID desc
+SELECT TOP 100 * FROM tesoreria.Factura ORDER BY ID desc
+
+-- Se espera:
+-- Rechazar el ID de medio de pago si no existe
+-- Rechazar si el ID_Pago ya está en uso
+-- Rechazar si se proporciona un ID de una factura inexistente o que ya esté pagada
+-- Hora de pago en 0 si no se especifica
+-- Actualizar el estado de la factura envíada por parametro, y asignarle el ID de pago correspondiente
+
+------------------------------
+--====socios.Insert_Cuentas====--
+
+-- Se le crea una cuenta con saldo en 0 a los socios que no poseían una cuenta
+--Para probar:
+INSERT INTO socios.Socio (DNI, Apellido, Nombre)
+VALUES ('31091218', 'Gallardo', 'Marcelo')
+SELECT * FROM socios.Socio ORDER BY ID DESC
+SELECT * FROM socios.Cuenta ORDER BY ID DESC
+EXEC socios.Insert_Cuentas
+SELECT * FROM socios.Cuenta ORDER BY ID DESC
+

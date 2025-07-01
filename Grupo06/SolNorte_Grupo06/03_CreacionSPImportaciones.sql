@@ -58,7 +58,7 @@ BEGIN
         FROM #TempImport_Actividad
         WHERE Actividad IS NULL OR Importe IS NULL OR Vigente_Hasta IS NULL
     )
-        PRINT 'Algunos registros tienen campos nulos (Actividad, Importe o Vigente_Hasta).';
+        RAISERROR('Algunos registros tienen campos nulos (Actividad, Importe o Vigente_Hasta).',10,1);
 
     -- Importes negativos
     IF EXISTS (
@@ -66,7 +66,7 @@ BEGIN
         FROM #TempImport_Actividad
         WHERE Importe < 0
     )
-        PRINT 'Algunos registros tienen importes negativos.';
+        RAISERROR('Algunos registros tienen importes negativos.', 10, 1);
 
     -- Tarifas ya existentes
     IF EXISTS (
@@ -80,7 +80,7 @@ BEGIN
               AND t.Vigente_Hasta = tmp.Vigente_Hasta
         )
     )
-        PRINT 'Algunas tarifas ya existen en la base de datos.';
+        RAISERROR('Algunas tarifas ya existen en la base de datos.',10,1);
 
     -- Inserción de las tarifas válidas
     INSERT INTO tesoreria.Tarifa_Actividad (Importe_Por_Mes, Vigente_Hasta)
@@ -110,7 +110,7 @@ BEGIN
 		  AND a.ID_Tarifa = t.ID
 	);
 
-	Print('Actividades importadas')
+	RAISERROR('Actividades importadas',10,1)
 
 	DROP TABLE #TempImport_Actividad;
 END
@@ -166,7 +166,7 @@ BEGIN
 	FROM #TempImport_Tarifa_Pileta
 	WHERE Valor_Invitados IS NOT NULL;
 
-	Print('Tarifas de pileta importadas')
+	RAISERROR('Tarifas de pileta importadas',10,1)
 
 	DROP TABLE #TempImport_Tarifa_Pileta;
 END
@@ -227,7 +227,7 @@ BEGIN
 
 	DROP TABLE #TempImport_Tarifa_Cuota;
 
-	Print('Categorías y tarifas de socios importadas')
+	RAISERROR('Categorías y tarifas de socios importadas',10,1)
 
 END
 GO
@@ -364,7 +364,7 @@ BEGIN
 	DROP TABLE #Datos_Procesados;
 	EXEC club.sp_EncriptarEmpleado @password;
 
-	Print('Asistencias importadas')
+	RAISERROR('Asistencias importadas',10,1)
 
 END
 GO
@@ -531,8 +531,8 @@ BEGIN
 	DROP TABLE #Errores;
     DROP TABLE #SociosExcel;
 
-	Print('Socios responsables de pago importados')
-
+	RAISERROR('Socios responsables de pago importados',10,1)
+	EXEC socios.Insert_Cuentas
 END;
 GO
 
@@ -641,7 +641,8 @@ BEGIN
 
 	DROP TABLE #GrupoFamiliarExcel;
 
-	Print('Socios y grupos familiares importados')
+	RAISERROR('Socios y grupos familiares importados',10,1)
+	EXEC socios.Insert_Cuentas
 
 END;
 GO
@@ -763,7 +764,7 @@ BEGIN
 			ID_Recargo, ID_Estado, ID_Pago
 		)
 		VALUES (
-			1, 1, src.Fecha_Pago, NULL, src.Importe,
+			1, 1, src.Fecha_Pago, '00:00', src.Importe,
 			DATEADD(DAY, 5, src.Fecha_Pago), DATEADD(DAY, 10, src.Fecha_Pago),
 			NULL, 1, src.ID_Pago
 		)
@@ -788,7 +789,7 @@ BEGIN
     DROP TABLE #PagosInsertados;
     DROP TABLE #FacturasInsertadas;
 
-    PRINT 'Importación de pagos, facturas y asignación de cuotas completada.';
+    RAISERROR('Importación de pagos, facturas y asignación de cuotas completada.',10,1);
 END;
 GO
 
@@ -844,7 +845,7 @@ BEGIN
 	)
 	DELETE FROM Duplicados WHERE rn > 1 OR Duplicados.Lluvia = 0;
 	
-	Print('Lluvias del 2024 y 2025 importadas')
+	RAISERROR('Lluvias del 2024 y 2025 importadas',10,1)
 
 END
 GO

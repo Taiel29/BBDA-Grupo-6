@@ -116,8 +116,8 @@
           <FullPath>2_TestingImportaciones.sql</FullPath>
         </FileNode>
         <FileNode Name="3_TestingReportes.sql">
-          <AssociatedConnectionMoniker />
-          <AssociatedConnSrvName />
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:TAIELPC:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>TAIELPC</AssociatedConnSrvName>
           <AssociatedConnUserName />
           <FullPath>3_TestingReportes.sql</FullPath>
         </FileNode>

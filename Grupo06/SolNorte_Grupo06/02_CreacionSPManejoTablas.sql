@@ -12,6 +12,36 @@
 USE Com2900G06
 GO
 
+CREATE OR ALTER PROCEDURE tesoreria.Insert_Recargo
+    @DiasDesdeVencimiento INT,
+    @Porcentaje NUMERIC(5,2)
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    IF (@Porcentaje > 0)
+    BEGIN
+        IF (@DiasDesdeVencimiento IS NULL OR @DiasDesdeVencimiento < 0)
+            RAISERROR('Se debe proporcionar una cantidad de dias igual o mayor a 0', 10, 1);
+        ELSE
+        BEGIN
+            IF NOT EXISTS (SELECT 1
+                FROM tesoreria.Recargo
+                WHERE Cantidad_Dias_Desde_Vencimiento = @DiasDesdeVencimiento)
+            BEGIN
+                INSERT INTO tesoreria.Recargo(Cantidad_Dias_Desde_Vencimiento, Porcentaje)
+                VALUES (@DiasDesdeVencimiento, @Porcentaje);
+                RAISERROR('Nuevo recargo registrado.', 10, 1);
+            END
+            ELSE
+                RAISERROR('Ya hay un recargo para esa cantidad de dias', 10, 1);
+        END
+    END
+    ELSE
+        RAISERROR('Se debe proporcionar un porcentaje mayor a 0', 10, 1);
+END
+GO
+
 CREATE OR ALTER PROCEDURE tesoreria.Insert_Medio_Pago
     @Descripcion VARCHAR(20)
 AS
@@ -169,9 +199,11 @@ BEGIN
 END
 GO
 
+------------------------
+
 CREATE OR ALTER PROCEDURE tesoreria.Insert_Factura
     @FechaEmision DATE,
-    @HoraEmision TIME,
+    @HoraEmision TIME = NULL,
     @Importe DECIMAL(10,2),
     @ID_Factura INT OUTPUT
 
@@ -182,6 +214,12 @@ BEGIN
     IF (@Importe IS NULL OR @Importe < 0)
     BEGIN
         RAISERROR('El importe no puede ser negativo.', 10, 1);
+        RETURN;
+    END
+
+    IF (@FechaEmision IS NULL or @FechaEmision = '')
+    BEGIN
+        RAISERROR('La fecha no puede ser nula', 10, 1);
         RETURN;
     END
 
@@ -218,12 +256,19 @@ GO
 CREATE OR ALTER PROCEDURE actividades.Insert_Inscripcion_Pileta
     @NroSocio CHAR(8),
     @TipoPase VARCHAR(50),
-    @Fecha DATE
+    @Fecha DATE,
+    @Hora Time = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
 
     SET @TipoPase = ltrim(rtrim(UPPER(@TipoPase)))
+
+    IF (@Fecha IS NULL or @Fecha = '')
+    BEGIN
+        RAISERROR('La fecha no puede ser nula', 10, 1);
+        RETURN;
+    END
 
     DECLARE @ID_Socio INT,
             @FechaNacimiento DATE,
@@ -233,8 +278,7 @@ BEGIN
             @ID_Actividad_Extra INT,
             @ID_Factura INT,
             @ImporteFactura DECIMAL(10,2),
-            @FechaEmision DATE,
-            @HoraEmision TIME;
+            @Descripcion VARCHAR(100);
 
     SELECT @ID_Socio = ID,
            @FechaNacimiento = ss.Fecha_Nacimiento
@@ -254,23 +298,36 @@ BEGIN
         SET @Edad = @Edad - 1;
     END
 
-    SET @ID_Tarifa_Pileta = 
-        CASE 
-            WHEN UPPER(@TipoPase) = 'DIARIO'    AND @Edad < 12 THEN 2
-            WHEN UPPER(@TipoPase) = 'DIARIO'    AND @Edad >= 12 THEN 1
-            WHEN UPPER(@TipoPase) = 'TEMPORADA' AND @Edad < 12 THEN 4
-            WHEN UPPER(@TipoPase) = 'TEMPORADA' AND @Edad >= 12 THEN 3
-            WHEN UPPER(@TipoPase) = 'MENSUAL'   AND @Edad < 12 THEN 6
-            WHEN UPPER(@TipoPase) = 'MENSUAL'   AND @Edad >= 12 THEN 5
-            ELSE NULL
-        END;
+    SET @Descripcion = 
+    CASE 
+        WHEN UPPER(@TipoPase) = 'DIARIO'    AND @Edad < 12 THEN 'Valor del dia Menores de 12 años Socio'
+        WHEN UPPER(@TipoPase) = 'DIARIO'    AND @Edad >= 12 THEN 'Valor del dia Adultos Socio'
+        WHEN UPPER(@TipoPase) = 'TEMPORADA' AND @Edad < 12 THEN 'Valor de temporada Menores de 12 años Socio'
+        WHEN UPPER(@TipoPase) = 'TEMPORADA' AND @Edad >= 12 THEN 'Valor de temporada Adultos Socio'
+        WHEN UPPER(@TipoPase) = 'MENSUAL'   AND @Edad < 12 THEN 'Valor del Mes Menores de 12 años Socio'
+        WHEN UPPER(@TipoPase) = 'MENSUAL'   AND @Edad >= 12 THEN 'Valor del Mes Adultos Socio'
+        ELSE NULL
+    END;
 
-    IF @ID_Tarifa_Pileta IS NULL
+    IF @Descripcion IS NULL
     BEGIN
         RAISERROR('Tipo de pase inválido. Debe ser Diario, Mensual o Temporada.',10,1);
         RETURN;
     END
-    
+
+    SELECT TOP 1 @ID_Tarifa_Pileta = ID
+    FROM tesoreria.Tarifa_Pileta
+    WHERE 
+        ltrim(rtrim(Descripcion)) = ltrim(rtrim(@Descripcion))
+        AND Vigente_Hasta >= @Fecha
+    ORDER BY Vigente_Hasta ASC;
+
+    IF @ID_Tarifa_Pileta IS NULL
+    BEGIN
+        RAISERROR('No hay tarifa vigente',10,1);
+        RETURN;
+    END
+
     SELECT @ImporteFactura = tp.Importe FROM tesoreria.Tarifa_Pileta tp WHERE tp.ID = @ID_Tarifa_Pileta;
 
     IF EXISTS (
@@ -288,12 +345,6 @@ BEGIN
         RETURN;
     END
 
-    IF NOT EXISTS (SELECT 1 FROM tesoreria.Tarifa_Pileta tf WHERE tf.ID = @ID_Tarifa_Pileta AND tf.Vigente_Hasta >= @Fecha)
-    BEGIN
-        RAISERROR('No se encontró una tarifa vigente con el ID proporcionado.',10,1);
-        RETURN;
-    END
-
     INSERT INTO actividades.Pileta (ID_Tarifa_Pileta)
     VALUES (@ID_Tarifa_Pileta);
 
@@ -304,12 +355,9 @@ BEGIN
 
     SET @ID_Actividad_Extra = SCOPE_IDENTITY();
 
-    SET @FechaEmision = CAST(GETDATE() AS DATE);
-    SET @HoraEmision = CAST(GETDATE() AS TIME)
-
     EXEC tesoreria.Insert_Factura
-        @FechaEmision,
-        @HoraEmision,
+        @FechaEmision = @Fecha,
+        @HoraEmision = @Hora,
         @Importe = @ImporteFactura,
         @ID_Factura = @ID_Factura OUTPUT;
 
@@ -324,3 +372,90 @@ BEGIN
 END
 GO
 
+------------------------
+
+CREATE OR ALTER PROCEDURE tesoreria.Insert_Pago
+    @Fecha DATE,
+    @Hora TIME = NULL,
+    @ID_Medio_De_Pago INT,
+    @ID_Pago BIGINT,
+    @ID_Factura INT,
+    @ID_Pago_Creado INT OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON
+    
+    IF (@Fecha IS NULL or @Fecha = '')
+    BEGIN
+        RAISERROR('La fecha no puede ser nula', 10, 1);
+        RETURN;
+    END
+
+    IF NOT EXISTS(SELECT 1 FROM tesoreria.Medio_Pago WHERE ID = @ID_Medio_De_Pago)
+    BEGIN
+        RAISERROR('No existe medio de pago con ese ID', 10, 1);
+        RETURN;
+    END
+
+    IF (@ID_Pago IS NULL or @ID_Pago < 0)
+    BEGIN
+        RAISERROR('ID_Pago no válido (NULL o Negativo)', 10, 1);
+        RETURN;
+    END
+
+    IF EXISTS (SELECT 1 FROM tesoreria.Pago WHERE ID_Pago = @ID_Pago)
+    BEGIN
+        RAISERROR('El ID_Pago proporcionado ya está en uso', 10, 1);
+        RETURN;
+    END
+
+    IF NOT EXISTS(SELECT 1 FROM tesoreria.Factura WHERE ID = @ID_Factura AND ID_Pago IS NULL)
+    BEGIN
+        RAISERROR('No hay una factura impaga con esa ID', 10, 1);
+        RETURN;
+    END
+
+    INSERT INTO tesoreria.Pago (ID_Pago, Fecha_Pago, Hora_Pago, Medio_Pago)
+    SELECT @ID_Pago, @Fecha, @Hora, @ID_Medio_De_Pago
+
+    SET @ID_Pago_Creado = SCOPE_IDENTITY();
+
+    UPDATE tesoreria.Factura
+    SET ID_Estado = 1,
+    ID_Pago = @ID_Pago_Creado
+    WHERE ID = @ID_Factura
+
+    IF EXISTS (SELECT 1 FROM tesoreria.Factura WHERE ID = @ID_Factura AND Fecha_Primer_Vencimiento <= @Fecha)
+    BEGIN
+        DECLARE @IDRecargo INT
+
+        SELECT TOP 1 @IDRecargo = tr.ID
+        FROM tesoreria.Recargo tr
+        INNER JOIN tesoreria.Factura tf ON tf.ID = @ID_Factura
+        WHERE DATEDIFF(DAY, tf.Fecha_Primer_Vencimiento, @Fecha) >= tr.Cantidad_Dias_Desde_Vencimiento
+        ORDER BY tr.Cantidad_Dias_Desde_Vencimiento DESC;
+
+        UPDATE tesoreria.Factura
+        SET ID_Recargo = @IDRecargo
+        WHERE ID = @ID_Factura
+    END
+    RAISERROR('Pago guardado correctamente y estado de factura actualizado', 10, 1);
+END
+GO
+
+CREATE OR ALTER PROCEDURE socios.Insert_Cuentas
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    INSERT INTO socios.Cuenta (ID_Socio)
+    SELECT s.ID
+    FROM socios.Socio s
+    WHERE NOT EXISTS (
+        SELECT 1
+        FROM socios.Cuenta c
+        WHERE c.ID_Socio = s.ID
+    );
+    RAISERROR('Se les ha creado una cuenta a los socios que no poseían', 10, 1);
+END
+GO

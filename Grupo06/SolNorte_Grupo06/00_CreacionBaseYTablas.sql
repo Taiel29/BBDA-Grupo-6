@@ -399,8 +399,8 @@ CREATE TABLE socios.Invitado(
 	FOREIGN KEY(ID_Pileta) REFERENCES actividades.Pileta(ID),
 );
 
-IF OBJECT_ID(N'socios.Invita', N'U') IS NOT NULL
-	DROP TABLE socios.Invita
+IF OBJECT_ID(N'socios.Invita_Invitado', N'U') IS NOT NULL
+	DROP TABLE socios.Invita_Invitado
 GO
 
 CREATE TABLE socios.Socio_Invita_Invitado(
@@ -453,14 +453,14 @@ CREATE TABLE tesoreria.Factura(
 	ID INT IDENTITY (1,1) PRIMARY KEY,
 	PDV INT,
 	Numero INT,
-	Fecha_Emision DATE,
+	Fecha_Emision DATE NOT NULL,
 	Hora_Emision TIME,
-	Importe DECIMAL(10,2),
+	Importe DECIMAL(10,2) NOT NULL,
 	Fecha_Primer_Vencimiento DATE,
 	Fecha_Segundo_Vencimiento DATE,
-	ID_Recargo INT,
-	ID_Estado INT,
-	ID_Pago INT,
+	ID_Recargo INT NULL,
+	ID_Estado INT NULL,
+	ID_Pago INT NULL,
 	FOREIGN KEY (ID_Recargo) REFERENCES tesoreria.Recargo(ID),
 	FOREIGN KEY (ID_Estado) REFERENCES tesoreria.Estado_Factura(ID),
 	FOREIGN KEY (ID_Pago) REFERENCES tesoreria.Pago(ID)
