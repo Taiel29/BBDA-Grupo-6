@@ -40,8 +40,8 @@ BEGIN
 		JOIN socios.Socio s ON c.ID_Socio = s.ID
 		JOIN tesoreria.Estado_Factura ef ON f.ID_Estado = ef.ID
 		WHERE 
-			f.ID_Pago IS NULL
-			AND f.Fecha_Emision BETWEEN @FechaDesde AND @FechaHasta
+			--f.ID_Pago IS NULL
+			f.Fecha_Emision BETWEEN @FechaDesde AND @FechaHasta
 			AND ef.Descripcion = 'PAGADA CON RETRASO'
 			AND ef.ID = f.ID_Estado
 		GROUP BY 

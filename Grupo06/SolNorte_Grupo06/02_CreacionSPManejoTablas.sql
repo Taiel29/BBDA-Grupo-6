@@ -257,7 +257,8 @@ GO
 CREATE OR ALTER PROCEDURE tesoreria.Insert_Cuota
 @Mes INT,
 @Socio INT,
-@Importe DECIMAL(10,2)
+@Importe DECIMAL(10,2),
+@ID_Factura INT OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -320,12 +321,14 @@ BEGIN
         DATEADD(DAY, 5, @FechaEmision),
         DATEADD(DAY, 10, @FechaEmision),
         NULL,              
-        3,                
+        2,                
         NULL              
     );
 
 	UPDATE tesoreria.Cuota SET ID_Factura = (SELECT MAX(ID) FROM tesoreria.Factura)
 	WHERE ID = (SELECT MAX(ID) FROM tesoreria.Cuota);
+
+	SET @ID_Factura = (SELECT MAX(ID) FROM tesoreria.Factura);
 
     RAISERROR ('Cuota con factura insertada con éxito.',10,1);
 END;
