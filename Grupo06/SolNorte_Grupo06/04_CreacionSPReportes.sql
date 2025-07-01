@@ -9,18 +9,22 @@
 --Rojas Taiel Ezequiel - DNI: 46183434
 --Cropalati Franco Nicolas - DNI: 43404823
 
+USE Com2900G06
+GO
+
 /*Reporte 2
 Reporte acumulado mensual de ingresos por actividad deportiva al momento en que se saca
 el reporte tomando como inicio enero.*/
 
-CREATE OR ALTER PROCEDURE sp_IngresosMensualesPorActividad
+CREATE OR ALTER PROCEDURE reportes.IngresosMensualesPorActividad
 AS
 BEGIN
     SELECT 
         DATENAME(MONTH, asist.Fecha) AS Mes,
+        MONTH(asist.Fecha) AS NumeroMes,
         YEAR(asist.Fecha) AS Anio,
         act.Descripcion AS Actividad,
-        SUM(tarifa.Monto) AS Ingreso_Total
+        SUM(tarifa.Importe_Por_Mes) AS Ingreso_Total
     FROM actividades.Socio_Asiste_Clase asist
     JOIN actividades.Clase clase ON asist.ID_Clase = clase.ID
     JOIN actividades.Actividad act ON clase.ID_Actividad = act.ID
@@ -30,20 +34,19 @@ BEGIN
         AND MONTH(asist.Fecha) <= MONTH(GETDATE())
     GROUP BY 
         DATENAME(MONTH, asist.Fecha), 
+        MONTH(asist.Fecha),
         YEAR(asist.Fecha), 
         act.Descripcion
-    ORDER BY Anio, MONTH(asist.Fecha), act.Descripcion;
-END;
+    ORDER BY Anio, NumeroMes, Actividad;
+END
+GO
 
 /* REPORTE 3
 Reporte de la cantidad de socios que han realizado alguna actividad de forma alternada
 (inasistencias) por categoría de socios y actividad, ordenado según cantidad de inasistencias
 ordenadas de mayor a menor*/
 
-USE Com2900G06
-GO
-
-CREATE OR ALTER PROCEDURE reportes.sp_ReporteInasistencias
+CREATE OR ALTER PROCEDURE reportes.ReporteInasistencias
 AS
 BEGIN
     SELECT 
@@ -54,7 +57,7 @@ BEGIN
     JOIN socios.Socio soc ON asist.ID_Socio = soc.ID
     JOIN actividades.Clase cl ON asist.ID_Clase = cl.ID
     JOIN actividades.Actividad act ON cl.ID_Actividad = act.ID
-     JOIN socios.Categoria_Socio cat ON soc.ID_Categoria_Socio = cat.ID
+    JOIN socios.Categoria_Socio cat ON soc.ID_Categoria_Socio = cat.ID
     WHERE asist.Asiste IN ('A', 'J')  -- A: ausente, J: justificado
     GROUP BY cat.Nombre, act.Descripcion
     ORDER BY Cantidad_Inasistencias DESC;
@@ -65,7 +68,7 @@ GO
 Reporte que contenga a los socios que no han asistido a alguna clase de la actividad que
 realizan. El reporte debe contener: Nombre, Apellido, edad, categoría y la actividad*/
 
-CREATE OR ALTER PROCEDURE reportes.sp_SociosConInasistencias
+CREATE OR ALTER PROCEDURE reportes.SociosConInasistencias
 AS
 BEGIN
     SELECT DISTINCT

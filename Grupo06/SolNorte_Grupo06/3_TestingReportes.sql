@@ -14,8 +14,11 @@
 USE Com2900G06
 GO
 
+-- Reporte 2
+EXEC reportes.IngresosMensualesPorActividad
+
 -- Reporte 3
-EXEC reportes.sp_ReporteInasistencias;
+EXEC reportes.ReporteInasistencias;
 
 -- Reporte 4
-EXEC reportes.sp_SociosConInasistencias;
+EXEC reportes.SociosConInasistencias;
